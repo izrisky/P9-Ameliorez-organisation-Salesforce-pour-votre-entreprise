@@ -3,11 +3,11 @@ name: Deploy and Validate Metadata
 on:
   pull_request:
     branches:
-      - main
+      - Dev
 
   push:
     branches:
-      - main
+      - Dev
 
 jobs:
   sfdxvalidate:
@@ -34,11 +34,11 @@ jobs:
           echo "y" | npm install sfdx-git-delta@3.3.0 -g
 
       - name: 'Authentification Salesforce' # Vous devez avoir une connexion avec Salesforce pour pouvoir deployer le code à la dernière étape.
-        run:  # A faire
+        run:  sfdx force:auth:jwt:grant --clientid ${{ secrets.CLIENT_ID }} --jwtkeyfile ${{ secrets.JWT_KEY }} --username ${{ secrets.SF_USERNAME }} --setdefaultdevhubusername -a DevHub # A faire
 
       - name: 'Generate metadata delta pull request'  # Utilisez le plug-in sfdx-git-delta pour effectuer un delta, generer le package xml dans un fichier temporaire ex : .temp
-        run:  # A faire
+        run:  sgd --to HEAD --from Dev --output .temp  # A faire
 
-      - name: 'Déployer les métadonnées sur la branch main'
-        if: github.ref == 'refs/heads/main'
-        run:  # A faire déployer le code venant du fichier package.xml généré précédemment 
+      - name: 'Déployer les métadonnées sur la branch Dev'
+        if: github.ref == 'refs/heads/Dev'
+        run:  sfdx force:source:deploy -u DevHub -x .temp/package/package.xml --checkonly -w 20 # A faire déployer le code venant du fichier package.xml généré précédemment 
