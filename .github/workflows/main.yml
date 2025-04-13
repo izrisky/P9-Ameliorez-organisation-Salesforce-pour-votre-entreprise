@@ -39,9 +39,11 @@ jobs:
           SF_PASSWORD: ${{ secrets.SF_PASSWORD }}          
           SF_TOKEN: ${{ secrets.SF_TOKEN }}
         run: |
-          echo $SF_PASSWORD$SF_TOKEN | sfdx auth:login --username $SF_USERNAME --instanceurl https://login.salesforce.com --password-stdin
-          sfdx config:set defaultusername=$SF_USERNAME
-
+          echo "$SF_PASSWORD$SF_TOKEN" | sf login \
+            --username $SF_USERNAME \
+            --password-stdin \
+            --instance-url https://login.salesforce.com
+          sf config set defaultusername=$SF_USERNAME
 
       - name: 'Generate metadata delta pull request'  # Utilisez le plug-in sfdx-git-delta pour effectuer un delta, generer le package xml dans un fichier temporaire ex : .temp
         run: |
@@ -53,8 +55,8 @@ jobs:
 
       - name: 'Validate metadata changes in Pull Request'
         if: github.event_name == 'pull_request'
-        run: sfdx force:source:deploy -x .temp/package/package.xml --checkonly -w 10
+        run: sf deploy metadata preview --directory .temp --target-org $SF_USERNAME
 
       - name: 'Deploy metadata to main'
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        run: sfdx force:source:deploy -x .temp/package/package.xml -w 10
+        run: sf deploy metadata --directory .temp --target-org $SF_USERNAME --wait 10
