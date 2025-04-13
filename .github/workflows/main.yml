@@ -35,11 +35,13 @@ jobs:
 
       - name: 'Authenticate Salesforce via CLI'
         env:
+          SF_JWT_KEY: ${{ secrets.SF_JWT_KEY }}
+          SF_CONSUMER_KEY: ${{ secrets.SF_CONSUMER_KEY }}
           SF_USERNAME: ${{ secrets.SF_USERNAME }}
-          SF_PASSWORD: ${{ secrets.SF_PASSWORD }}
-          SF_TOKEN: ${{ secrets.SF_TOKEN }}
         run: |
-          sfdx auth:jwt:grant --username $SF_USERNAME --clientid ${{ secrets.CONNECTED_APP_CONSUMER_KEY }} --jwtkeyfile server.key --instanceurl https://login.salesforce.com
+          echo "$SF_JWT_KEY" > server.key
+          sf org:login:jwt --username $SF_USERNAME --client-id $SF_CONSUMER_KEY --jwt-key-file server.key --instance-url https://login.salesforce.com --set-default
+          rm server.key
 
       - name: 'Generate metadata delta pull request'  # Utilisez le plug-in sfdx-git-delta pour effectuer un delta, generer le package xml dans un fichier temporaire ex : .temp
         run: |
