@@ -3,42 +3,35 @@ on:
   pull_request:
     branches:
       - main
-
   push:
     branches:
       - main
-
 jobs:
   sfdxvalidate:
     name: "Run SFDX Validate"
     runs-on: ubuntu-latest
-
     strategy:
       matrix:
         node-version: [18.x]
-
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0 
-
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-
-      - name: Install SFDX CLI and sfdx-git-delta plugin # Ce package va vous permettre de faire un delta entre votre branche et la branch ciblé. Voici la documentation : https://github.com/scolladon/sfdx-git-delta
+      - name: Install SFDX CLI and sfdx-git-delta plugin
         run: |
           npm install -g @salesforce/cli@latest
           echo "y" | npm install sfdx-git-delta@3.3.0 -g
-
       - name: 'Authentification Salesforce'
         run: |
           echo "${{ secrets.JWT_KEY }}" > server.key
-          sf org login jwt --client-id ${{ secrets.SF_CONSUMER_KEY }} --jwt-key-file server.key --username ${{ secrets.SF_USERNAME }} --instance-url https://login.salesforce.com --alias prod
-        env:
-          SF_PASSWORD: ${{ secrets.SF_PASSWORD }}
-          SF_TOKEN: ${{ secrets.SF_TOKEN }}
+          # S'assurer que la clé a les bons formats et permissions
+          chmod 600 server.key
+          cat server.key
+          sf org login jwt --client-id ${{ secrets.SF_CONSUMER_KEY }} --jwt-key-file server.key --username ${{ secrets.SF_USERNAME }} --instance-url https://login.salesforce.com --alias prod --json
       - name: 'Generate metadata delta pull request'
         run: |
           mkdir -p .temp/delta
