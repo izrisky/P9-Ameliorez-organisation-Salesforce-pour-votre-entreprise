@@ -43,3 +43,9 @@ $RECYCLE.BIN/
 **/__pycache__/
 **/.venv/
 **/venv/
+.husky/pre-commit
+.vscode/extensions.json
+.vscode/launch.json
+.vscode/settings.json
+force-app/main/default/aura/.eslintrc.json
+force-app/main/default/lwc/.eslintrc.json

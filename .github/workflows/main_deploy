@@ -33,12 +33,18 @@ jobs:
           npm install -g @salesforce/cli@latest
           echo "y" | npm install sfdx-git-delta@3.3.0 -g
 
-      - name: 'Authentification Salesforce' # Vous devez avoir une connexion avec Salesforce pour pouvoir deployer le code à la dernière étape.
-        run:  sfdx force:auth:jwt:grant --clientid ${{ secrets.CLIENT_ID }} --jwtkeyfile ${{ secrets.JWT_KEY }} --username ${{ secrets.SF_USERNAME }} --setdefaultdevhubusername -a DevHub # A faire
+      - name: 'Authentification Salesforce'
+        env:
+          SF_CONSUMER_KEY: ${{ secrets.SF_CONSUMER_KEY }}
+          SF_USERNAME: ${{ secrets.SF_USERNAME }}
+          SF_PASSWORD: ${{ secrets.SF_PASSWORD }}
+          SF_TOKEN: ${{ secrets.SF_TOKEN }}
+        run: |
+          echo $SF_PASSWORD$SF_TOKEN | sfdx auth:jwt:grant --clientid $SF_CONSUMER_KEY --username $SF_USERNAME --instanceurl https://login.salesforce.com --setalias MyDefaultOrg
 
       - name: 'Generate metadata delta pull request'  # Utilisez le plug-in sfdx-git-delta pour effectuer un delta, generer le package xml dans un fichier temporaire ex : .temp
-        run:  sgd --to HEAD --from main --output .temp  # A faire
+        run:  sgd source:delta -t HEAD^ -f ${GITHUB_SHA} -o .temp  # A faire
 
       - name: 'Déployer les métadonnées sur la branch main'
         if: github.ref == 'refs/heads/main'
-        run:  sfdx force:source:deploy -u DevHub -x .temp/package/package.xml --checkonly -w 20 # A faire déployer le code venant du fichier package.xml généré précédemment 
+        run:  sfdx force:source:deploy -x .temp/package/package.xml -u $SF_USERNAME -w 10 # A faire déployer le code venant du fichier package.xml généré précédemment 
