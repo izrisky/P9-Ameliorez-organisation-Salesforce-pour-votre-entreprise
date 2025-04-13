@@ -33,16 +33,28 @@ jobs:
           npm install -g @salesforce/cli@latest
           echo "y" | npm install sfdx-git-delta@3.3.0 -g
 
-      - name: 'Authentifier Salesforce via CLI'
+      - name: 'Authenticate Salesforce via CLI'
         env:
           SF_USERNAME: ${{ secrets.SF_USERNAME }}
           SF_PASSWORD: ${{ secrets.SF_PASSWORD }}          
-          SF_TOKEN: ${{ secrets.SF_TOKEN }} # Combinez votre mot de passe avec un jeton de sécurité
-        run: echo $SF_PASSWORD$SF_TOKEN | sfdx auth:login --username $SF_USERNAME --password $SF_PASSWORD --instanceurl https://login.salesforce.com
+          SF_TOKEN: ${{ secrets.SF_TOKEN }}
+        run: |
+          echo $SF_PASSWORD$SF_TOKEN | sfdx auth:login --username $SF_USERNAME --instanceurl https://login.salesforce.com --password-stdin
+          sfdx config:set defaultusername=$SF_USERNAME
+
 
       - name: 'Generate metadata delta pull request'  # Utilisez le plug-in sfdx-git-delta pour effectuer un delta, generer le package xml dans un fichier temporaire ex : .temp
-        run:  sgd source:delta -t HEAD^ -f ${GITHUB_SHA} -o .temp  # A faire
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            sgd source:delta --to ${{ github.event.pull_request.base.sha }} --from ${{ github.event.pull_request.head.sha }} -o .temp
+          else
+            sgd source:delta --to HEAD^ --from HEAD -o .temp
+          fi
 
-      - name: 'Déployer les métadonnées sur la branch main'
-        if: github.ref == 'refs/heads/main'
-        run:  sfdx force:source:deploy -x .temp/package/package.xml -u $SF_USERNAME -w 10 # A faire déployer le code venant du fichier package.xml généré précédemment 
+      - name: 'Validate metadata changes in Pull Request'
+        if: github.event_name == 'pull_request'
+        run: sfdx force:source:deploy -x .temp/package/package.xml --checkonly -w 10
+
+      - name: 'Deploy metadata to main'
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: sfdx force:source:deploy -x .temp/package/package.xml -w 10
