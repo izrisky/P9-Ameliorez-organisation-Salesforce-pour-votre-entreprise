@@ -16,46 +16,56 @@ jobs:
       matrix:
         node-version: [18.x]
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Required for proper git history analysis
+          fetch-depth: 0
 
-      - name: Use Node.js ${{ matrix.node-version }}
+      - name: Setup Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
 
-      - name: Install SFDX CLI and plugins
+      - name: Install SFDX CLI and sfdx-git-delta
         run: |
           npm install -g @salesforce/cli@latest
-          echo "y" | npm install sfdx-git-delta@3.3.0 -g
+          echo "y" | npm install -g sfdx-git-delta@3.3.0
 
       - name: Authenticate to Salesforce
-        env:
-          SF_USERNAME: ${{ secrets.SF_USERNAME }}
-          SF_PASSWORD: ${{ secrets.SF_PASSWORD }}
-          SF_TOKEN: ${{ secrets.SF_TOKEN }}
         run: |
-          echo "$SF_PASSWORD$SF_TOKEN" | sf login \
-            --username $SF_USERNAME \
-            --password-stdin \
-            --instance-url https://login.salesforce.com
-          sf config set defaultusername=$SF_USERNAME
+          echo "${{ secrets.SFDX_AUTH_URL }}" > sfdx_auth.url
+          sf org login sfdx-url -f sfdx_auth.url -a prod --set-default
 
       - name: Generate metadata delta
         run: |
-          mkdir -p .temp
-          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
-            sgd source:delta --to ${{ github.event.pull_request.base.sha }} --from ${{ github.event.pull_request.head.sha }} -o .temp
+          mkdir -p .temp/delta
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            TARGET_REF="${{ github.base_ref }}"
           else
-            sgd source:delta --to HEAD^ --from HEAD -o .temp
+            TARGET_REF="main"
           fi
-          cat .temp/package/package.xml
+          sfdx sgd:source:delta --to "HEAD" --from "origin/$TARGET_REF" --output ".temp/delta" --generate-delta --source force-app
 
-      - name: Deploy to Production (Push)
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        run: sf deploy metadata --dir .temp/source --test-level RunLocalTests --wait 10
+      - name: Check if package.xml exists
+        id: check-delta
+        run: |
+          if [ -f .temp/delta/package.xml ]; then
+            echo "package_exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No metadata changes found. Skipping deploy/validate."
+            echo "package_exists=false" >> "$GITHUB_OUTPUT"
+          fi
 
-      - name: Validate Changes (PR)
-        if: github.event_name == 'pull_request'
-        run: sf deploy metadata preview --dir .temp/source --test-level RunLocalTests --async
+      - name: Deploy metadata to production
+        if: github.ref == 'refs/heads/main' && steps.check-delta.outputs.package_exists == 'true'
+        run: |
+          sf project deploy start --manifest .temp/delta/package.xml --test-level RunLocalTests --verbose
+
+      - name: Validate metadata on pull request
+        if: github.event_name == 'pull_request' && steps.check-delta.outputs.package_exists == 'true'
+        run: |
+          sf project deploy validate --manifest .temp/delta/package.xml --test-level RunLocalTests --verbose
+
+      - name: Cleanup
+        if: always()
+        run: rm -f sfdx_auth.url
