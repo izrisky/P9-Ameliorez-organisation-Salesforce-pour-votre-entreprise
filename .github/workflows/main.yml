@@ -27,7 +27,7 @@ jobs:
           echo "y" | npm install sfdx-git-delta@3.3.0 -g
       - name: 'Authentification Salesforce'
         run: |
-          sf org login username-password --username ${{ secrets.SF_USERNAME }} --password ${{ secrets.SF_PASSWORD }}${{ secrets.SF_TOKEN }} --instance-url https://login.salesforce.com --alias prod
+          sfdx auth:password:store --username ${{ secrets.SF_USERNAME }} --password ${{ secrets.SF_PASSWORD }}${{ secrets.SF_TOKEN }} --instance-url https://login.salesforce.com --alias prod
       - name: 'Generate metadata delta pull request'
         run: |
           mkdir -p .temp/delta
