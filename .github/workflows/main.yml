@@ -33,16 +33,12 @@ jobs:
           npm install -g @salesforce/cli@latest
           echo "y" | npm install sfdx-git-delta@3.3.0 -g
 
-      - name: 'Authentification Salesforce'
+      - name: 'Authentifier Salesforce via CLI'
         env:
-          SF_CONSUMER_KEY: ${{ secrets.SF_CONSUMER_KEY }}
           SF_USERNAME: ${{ secrets.SF_USERNAME }}
-          SF_PASSWORD: ${{ secrets.SF_PASSWORD }}
-          SF_TOKEN: ${{ secrets.SF_TOKEN }}
-          JWT_KEY: ${{ secrets.JWT_KEY }}
-        run: |
-          echo "$JWT_KEY" > jwt.key
-          sfdx auth:jwt:grant --clientid $SF_CONSUMER_KEY --username $SF_USERNAME --jwtkeyfile jwt.key --instanceurl https://login.salesforce.com --setalias MyDefaultOrg
+          SF_PASSWORD: ${{ secrets.SF_PASSWORD }}          
+          SF_TOKEN: ${{ secrets.SF_TOKEN }} # Combinez votre mot de passe avec un jeton de sécurité
+        run: echo $SF_PASSWORD$SF_TOKEN | sfdx auth:login --username $SF_USERNAME --password $SF_PASSWORD --instanceurl https://login.salesforce.com
 
       - name: 'Generate metadata delta pull request'  # Utilisez le plug-in sfdx-git-delta pour effectuer un delta, generer le package xml dans un fichier temporaire ex : .temp
         run:  sgd source:delta -t HEAD^ -f ${GITHUB_SHA} -o .temp  # A faire
