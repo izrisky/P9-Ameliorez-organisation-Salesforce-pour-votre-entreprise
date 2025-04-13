@@ -39,9 +39,7 @@ jobs:
           SF_PASSWORD: ${{ secrets.SF_PASSWORD }}
           SF_TOKEN: ${{ secrets.SF_TOKEN }}
         run: |
-          echo "$SF_PASSWORD$SF_TOKEN" > ./password.txt
-          sf auth login --username $SF_USERNAME --password-file ./password.txt --instance-url https://login.salesforce.com
-          rm ./password.txt
+          sfdx auth:jwt:grant --username $SF_USERNAME --clientid ${{ secrets.CONNECTED_APP_CONSUMER_KEY }} --jwtkeyfile server.key --instanceurl https://login.salesforce.com
 
       - name: 'Generate metadata delta pull request'  # Utilisez le plug-in sfdx-git-delta pour effectuer un delta, generer le package xml dans un fichier temporaire ex : .temp
         run: |
