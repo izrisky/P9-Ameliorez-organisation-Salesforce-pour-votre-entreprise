@@ -39,7 +39,7 @@ jobs:
           SF_PASSWORD: ${{ secrets.SF_PASSWORD }}
           SF_TOKEN: ${{ secrets.SF_TOKEN }}
         run: |
-          sf org login web --set-default-dev-hub --alias default --instance-url https://login.salesforce.com --username $SF_USERNAME --password "$SF_PASSWORD$SF_TOKEN"
+          sf org login username-password --username $SF_USERNAME --password "$SF_PASSWORD$SF_TOKEN" --instance-url https://login.salesforce.com --set-default
 
       - name: 'Generate metadata delta pull request'  # Utilisez le plug-in sfdx-git-delta pour effectuer un delta, generer le package xml dans un fichier temporaire ex : .temp
         run: |
