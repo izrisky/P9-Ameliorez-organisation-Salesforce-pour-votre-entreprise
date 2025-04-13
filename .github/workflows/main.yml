@@ -1,4 +1,5 @@
 name: Deploy and Validate Metadata
+
 on:
   pull_request:
     branches:
@@ -6,6 +7,7 @@ on:
   push:
     branches:
       - main
+
 jobs:
   sfdxvalidate:
     name: "Run SFDX Validate"
@@ -16,36 +18,44 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0 
+          fetch-depth: 0  # Required for proper git history analysis
+
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-      - name: Install SFDX CLI and sfdx-git-delta plugin
+
+      - name: Install SFDX CLI and plugins
         run: |
           npm install -g @salesforce/cli@latest
           echo "y" | npm install sfdx-git-delta@3.3.0 -g
-      - name: 'Authentification Salesforce'
+
+      - name: Authenticate to Salesforce
+        env:
+          SF_USERNAME: ${{ secrets.SF_USERNAME }}
+          SF_PASSWORD: ${{ secrets.SF_PASSWORD }}
+          SF_TOKEN: ${{ secrets.SF_TOKEN }}
         run: |
-          # Créer un fichier de configuration SFDX URL
-          echo "force://${{ secrets.SF_USERNAME }}:${{ secrets.SF_PASSWORD }}${{ secrets.SF_TOKEN }}@login.salesforce.com" > sfdx_auth.url
-          sf org login sfdx-url -f sfdx_auth.url -a prod
-      - name: 'Generate metadata delta pull request'
+          echo "$SF_PASSWORD$SF_TOKEN" | sf login \
+            --username $SF_USERNAME \
+            --password-stdin \
+            --instance-url https://login.salesforce.com
+          sf config set defaultusername=$SF_USERNAME
+
+      - name: Generate metadata delta
         run: |
-          mkdir -p .temp/delta
-          if [ $GITHUB_EVENT_NAME == 'pull_request' ]; then
-            TARGET_REF=$GITHUB_BASE_REF
+          mkdir -p .temp
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            sgd source:delta --to ${{ github.event.pull_request.base.sha }} --from ${{ github.event.pull_request.head.sha }} -o .temp
           else
-            git checkout -b currentBranch
-            TARGET_REF=main
+            sgd source:delta --to HEAD^ --from HEAD -o .temp
           fi
-          sfdx sgd:source:delta --to "HEAD" --from "origin/$TARGET_REF" --output ".temp/delta" --generate-delta --source force-app
-          cat .temp/delta/package.xml
-      - name: 'Déployer les métadonnées sur la branch main'
-        if: github.ref == 'refs/heads/main'
-        run: |
-          sf project deploy start --manifest .temp/delta/package.xml --test-level RunLocalTests
-      - name: 'Valider les métadonnées sur pull request'
+          cat .temp/package/package.xml
+
+      - name: Deploy to Production (Push)
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: sf deploy metadata --dir .temp/source --test-level RunLocalTests --wait 10
+
+      - name: Validate Changes (PR)
         if: github.event_name == 'pull_request'
-        run: |
-          sf project deploy validate --manifest .temp/delta/package.xml --test-level RunLocalTests
+        run: sf deploy metadata preview --dir .temp/source --test-level RunLocalTests --async
