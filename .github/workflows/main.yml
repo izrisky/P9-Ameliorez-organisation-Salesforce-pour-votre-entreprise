@@ -27,11 +27,7 @@ jobs:
           echo "y" | npm install sfdx-git-delta@3.3.0 -g
       - name: 'Authentification Salesforce'
         run: |
-          echo "${{ secrets.JWT_KEY }}" > server.key
-          # S'assurer que la clé a les bons formats et permissions
-          chmod 600 server.key
-          cat server.key
-          sf org login jwt --client-id ${{ secrets.SF_CONSUMER_KEY }} --jwt-key-file server.key --username ${{ secrets.SF_USERNAME }} --instance-url https://login.salesforce.com --alias prod --json
+          sf org login username-password --username ${{ secrets.SF_USERNAME }} --password ${{ secrets.SF_PASSWORD }}${{ secrets.SF_TOKEN }} --instance-url https://login.salesforce.com --alias prod
       - name: 'Generate metadata delta pull request'
         run: |
           mkdir -p .temp/delta
