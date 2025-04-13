@@ -1,5 +1,4 @@
 name: Deploy and Validate Metadata
-
 on:
   pull_request:
     branches:
@@ -33,28 +32,29 @@ jobs:
           npm install -g @salesforce/cli@latest
           echo "y" | npm install sfdx-git-delta@3.3.0 -g
 
-      - name: 'Authenticate Salesforce via CLI'
+      - name: 'Authentification Salesforce'
+        run: |
+          echo "${{ secrets.JWT_KEY }}" > server.key
+          sf org login jwt --client-id ${{ secrets.SF_CONSUMER_KEY }} --jwt-key-file server.key --username ${{ secrets.SF_USERNAME }} --instance-url https://login.salesforce.com --alias prod
         env:
-          SF_JWT_KEY: ${{ secrets.SF_JWT_KEY }}
-          SF_CONSUMER_KEY: ${{ secrets.SF_CONSUMER_KEY }}
-          SF_USERNAME: ${{ secrets.SF_USERNAME }}
+          SF_PASSWORD: ${{ secrets.SF_PASSWORD }}
+          SF_TOKEN: ${{ secrets.SF_TOKEN }}
+      - name: 'Generate metadata delta pull request'
         run: |
-          echo "$SF_JWT_KEY" > server.key
-          sf org:login:jwt --username $SF_USERNAME --client-id $SF_CONSUMER_KEY --jwt-key-file server.key --instance-url https://login.salesforce.com --set-default
-          rm server.key
-
-      - name: 'Generate metadata delta pull request'  # Utilisez le plug-in sfdx-git-delta pour effectuer un delta, generer le package xml dans un fichier temporaire ex : .temp
-        run: |
-          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
-            sgd source:delta --to ${{ github.event.pull_request.base.sha }} --from ${{ github.event.pull_request.head.sha }} -o .temp
+          mkdir -p .temp/delta
+          if [ $GITHUB_EVENT_NAME == 'pull_request' ]; then
+            TARGET_REF=$GITHUB_BASE_REF
           else
-            sgd source:delta --to HEAD^ --from HEAD -o .temp
+            git checkout -b currentBranch
+            TARGET_REF=main
           fi
-
-      - name: 'Validate metadata changes in Pull Request'
+          sfdx sgd:source:delta --to "HEAD" --from "origin/$TARGET_REF" --output ".temp/delta" --generate-delta --source force-app
+          cat .temp/delta/package.xml
+      - name: 'Déployer les métadonnées sur la branch main'
+        if: github.ref == 'refs/heads/main'
+        run: |
+          sf project deploy start --manifest .temp/delta/package.xml --test-level RunLocalTests
+      - name: 'Valider les métadonnées sur pull request'
         if: github.event_name == 'pull_request'
-        run: sf deploy metadata preview --directory .temp --target-org $SF_USERNAME
-
-      - name: 'Deploy metadata to main'
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        run: sf deploy metadata --directory .temp --target-org $SF_USERNAME --wait 10
+        run: |
+          sf project deploy validate --manifest .temp/delta/package.xml --test-level RunLocalTests
