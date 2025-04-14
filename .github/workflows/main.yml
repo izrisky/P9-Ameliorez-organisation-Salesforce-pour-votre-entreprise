@@ -28,13 +28,13 @@ jobs:
 
       - name: Install SFDX CLI and sfdx-git-delta
         run: |
-          npm install -g @salesforce/cli@latest
+          npm install -g sfdx-cli@latest
           echo "y" | npm install -g sfdx-git-delta@3.3.0
 
       - name: Authenticate to Salesforce
         run: |
           echo "${{ secrets.SFDX_AUTH_URL }}" > sfdx_auth.url
-          sf org login sfdx-url -f sfdx_auth.url -a prod --set-default
+          sfdx auth:sfdxurl:store -f sfdx_auth.url -a prod -d
 
       - name: Generate metadata delta
         run: |
@@ -59,12 +59,12 @@ jobs:
       - name: Deploy metadata to production
         if: github.ref == 'refs/heads/main' && steps.check-delta.outputs.package_exists == 'true'
         run: |
-          sf project deploy start --manifest .temp/delta/package.xml --test-level RunLocalTests --verbose
+          sfdx force:source:deploy --manifest .temp/delta/package.xml --testlevel RunLocalTests --verbose
 
       - name: Validate metadata on pull request
         if: github.event_name == 'pull_request' && steps.check-delta.outputs.package_exists == 'true'
         run: |
-          sf project deploy validate --manifest .temp/delta/package.xml --test-level RunLocalTests --verbose
+          sfdx force:source:deploy --manifest .temp/delta/package.xml --testlevel RunLocalTests --checkonly --verbose
 
       - name: Cleanup
         if: always()
