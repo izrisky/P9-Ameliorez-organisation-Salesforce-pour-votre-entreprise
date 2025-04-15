@@ -30,8 +30,12 @@ jobs:
 
       - name: Install SFDX CLI and sfdx-git-delta plugin
         run: |
+          npm uninstall -g @salesforce/cli || true
           npm install -g sfdx-cli
           sfdx plugins:install sfdx-git-delta
+
+      - name: Vérifier les plugins installés
+        run: sfdx plugins
 
       - name: Authentification Salesforce
         run: |
