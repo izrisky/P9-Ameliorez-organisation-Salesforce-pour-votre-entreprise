@@ -11,8 +11,7 @@ public with sharing class DataFactory {
         Opportunity opp = new Opportunity(
             Name = 'Test Opportunity',
             AccountId = acc.Id,
-            StageName = stageName,
-            CloseDate = closeDate
+            StageName = stageName
         );
         insert opp;
         return opp;
@@ -28,8 +27,7 @@ public with sharing class DataFactory {
         PricebookEntry pbe = new PricebookEntry(
             Pricebook2Id = Test.getStandardPricebookId(),
             Product2Id = product.Id,
-            UnitPrice = unitPrice,
-            IsActive = true
+            UnitPrice = unitPrice
         );
         insert pbe;
         return pbe;
