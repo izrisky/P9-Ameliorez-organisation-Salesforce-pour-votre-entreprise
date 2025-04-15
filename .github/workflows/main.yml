@@ -50,7 +50,14 @@ jobs:
             PREV_COMMIT=$(git rev-parse HEAD~1)
             sf sgd source delta --to HEAD --from $PREV_COMMIT --output .temp/delta --generate-delta --source force-app
           fi
-                  
+      - name: Debug delta directory
+        run: |
+          ls -la .temp/delta/
+          echo "Current commit: $(git rev-parse HEAD)"
+          echo "Previous commit: $(git rev-parse HEAD~1)"
+          echo "Changes in force-app directory:"
+          git diff --name-only HEAD HEAD~1 -- force-app/
+
       - name: Check if package.xml exists
         id: check-delta
         run: |
