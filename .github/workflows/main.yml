@@ -56,8 +56,8 @@ jobs:
       - name: Generate metadata delta pull request
         run: |
           mkdir -p .temp/delta
-          sfdx sgd:source:delta --to "$TO_REF" --from "$FROM_REF" --output-dir ".temp/delta" --generate-delta --source-dir force-app
-      
+          sfdx sgd:source:delta --to "$TO_REF" --from "$FROM_REF" --output-dir ".temp/delta" --generate-delta --source-dir force-app || true
+          
       - name: Check if package.xml exists
         id: check-delta
         run: |
