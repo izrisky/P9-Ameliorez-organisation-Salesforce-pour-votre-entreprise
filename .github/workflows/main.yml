@@ -64,11 +64,11 @@ jobs:
           git diff --name-status $FROM_REF $TO_REF || echo "Diff failed (may be first push or broken context)"
 
       # 6. Générer le delta (on autorise aucune modif = OK, le step suivant gère tout)
-      - name: Generate metadata delta
+      - name: Générer le delta
         run: |
           mkdir -p .temp/delta
-          sfdx sgd:source:delta --from "$FROM_REF" --to "$TO_REF" --output-dir ".temp/delta" --generate-delta --source-dir force-app || true
-
+          sfdx sgd:source:delta --from "$FROM_REF" --to "$TO_REF" --output-dir ".temp/delta" --generate-delta --source-dir force-app/main
+      
       # 7. Vérifier si package.xml existe (= il y a du diff à pousser)
       - name: Check if package.xml exists
         id: check-delta
