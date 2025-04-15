@@ -28,10 +28,10 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
 
-      - name: Install SFDX CLI and sfdx-git-delta plugin # Ce package va vous permettre de faire un delta entre votre branche et la branch ciblé. Voici la documentation : https://github.com/scolladon/sfdx-git-delta
+      - name: Install SFDX CLI and sfdx-git-delta # plugin Ce package va vous permettre de faire un delta entre votre branche et la branch ciblé. Voici la documentation : https://github.com/scolladon/sfdx-git-delta
         run: |
           npm install -g @salesforce/cli@latest
-          echo "y" | npm install sfdx-git-delta@3.3.0 -g
+          echo "y" | npm install -g sfdx-git-delta@3.3.0
 
       - name: 'Authentification Salesforce' # Vous devez avoir une connexion avec Salesforce pour pouvoir deployer le code à la dernière étape.
         run: |
