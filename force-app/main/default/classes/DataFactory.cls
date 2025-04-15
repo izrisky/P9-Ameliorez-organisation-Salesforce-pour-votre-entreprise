@@ -1,6 +1,9 @@
 public with sharing class DataFactory {
     ///Ce commentaire est ajouter pour tester la pipeline !!!!!!
     ///Ce commentaire est ajouter pour tester la pipeline !!!!!!
+    ///Ce commentaire est ajouter pour tester la pipeline !!!!!!
+    ///Ce commentaire est ajouter pour tester la pipeline !!!!!!
+    ///Ce commentaire est ajouter pour tester la pipeline !!!!!!
     public static Account createAccount(String name) {
         Account acc = new Account(Name = name);
         insert acc;

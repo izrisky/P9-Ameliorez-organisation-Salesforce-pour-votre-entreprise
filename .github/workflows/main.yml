@@ -2,46 +2,72 @@ name: Deploy and Validate Metadata
 
 on:
   pull_request:
-    branches: [main]
+    branches:
+      - main
+
   push:
-    branches: [main]
+    branches:
+      - main
 
 jobs:
-  deploy:
+  sfdxvalidate:
+    name: "Run SFDX Validate"
     runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18.x]
+
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Nécessaire pour l'historique Git complet
+          fetch-depth: 0 
 
-      - name: Install Salesforce CLI
-        run: npm install -g @salesforce/cli@latest
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
 
-      - name: Install sfdx-git-delta (via sfdx)
-        run: sfdx plugins:install sfdx-git-delta@4.12.0  # Version testée
+      - name: Install SFDX CLI and sfdx-git-delta plugin
+        run: |
+          npm install -g sfdx-cli
+          sfdx plugins:install sfdx-git-delta
 
-      - name: Debug plugins
-        run: sfdx plugins --core  # Vérifie l'installation
-
-      - name: Authenticate to Salesforce
+      - name: Authentification Salesforce
         run: |
           echo "${{ secrets.SFDX_AUTH_URL }}" > sfdx_auth.url
           sfdx auth:sfdxurl:store -f sfdx_auth.url -a prod -d
 
-      - name: Generate Delta Package
+      - name: Generate metadata delta pull request
         run: |
           mkdir -p .temp/delta
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            FROM_COMMIT="origin/${{ github.base_ref }}"
+            TARGET_REF="${{ github.base_ref }}"
           else
-            FROM_COMMIT="HEAD~1"  # Pour les push directs sur main
+            TARGET_REF="main"
           fi
-          sfdx sgd:source:delta --to "HEAD" --from "$FROM_COMMIT" --output .temp/delta --source force-app
+          sfdx sgd:source:delta --to "HEAD" --from "origin/$TARGET_REF" --output ".temp/delta" --generate-delta --source force-app
 
-      - name: Deploy to Production
-        if: github.ref == 'refs/heads/main'
-        run: sfdx force:source:deploy --manifest .temp/delta/package.xml --testlevel RunLocalTests
+      - name: Check if package.xml exists
+        id: check-delta
+        run: |
+          if [ -f .temp/delta/package.xml ]; then
+            echo "package_exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No metadata changes found. Skipping deploy/validate."
+            echo "package_exists=false" >> "$GITHUB_OUTPUT"
+          fi
 
-      - name: Validate in PR
-        if: github.event_name == 'pull_request'
-        run: sfdx force:source:deploy --manifest .temp/delta/package.xml --checkonly --testlevel RunLocalTests
+      - name: Déployer les métadonnées sur la branch main
+        if: github.ref == 'refs/heads/main' && steps.check-delta.outputs.package_exists == 'true'
+        run: |
+          sfdx force:source:deploy --manifest .temp/delta/package.xml --testlevel RunLocalTests --verbose
+
+      - name: Valider les métadonnées dans une pull request
+        if: github.event_name == 'pull_request' && steps.check-delta.outputs.package_exists == 'true'
+        run: |
+          sfdx force:source:deploy --manifest .temp/delta/package.xml --testlevel RunLocalTests --checkonly --verbose
+
+      - name: Cleanup
+        if: always()
+        run: rm -f sfdx_auth.url
