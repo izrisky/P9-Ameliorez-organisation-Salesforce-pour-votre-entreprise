@@ -14,18 +14,14 @@ jobs:
         with:
           fetch-depth: 0  # Nécessaire pour l'historique Git complet
 
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 18.x
+      - name: Install Salesforce CLI
+        run: npm install -g @salesforce/cli@latest
 
-      - name: Install Salesforce CLI and sfdx-git-delta
-        run: |
-          npm install -g @salesforce/cli@latest
-          sfdx plugins:install sfdx-git-delta@latest
+      - name: Install sfdx-git-delta (via sfdx)
+        run: sfdx plugins:install sfdx-git-delta@4.12.0  # Version testée
 
-      - name: Check sfdx-git-delta installation
-        run: sfdx plugins --core
+      - name: Debug plugins
+        run: sfdx plugins --core  # Vérifie l'installation
 
       - name: Authenticate to Salesforce
         run: |
@@ -35,19 +31,17 @@ jobs:
       - name: Generate Delta Package
         run: |
           mkdir -p .temp/delta
-          if [ "${{ github.event.name }}" = "pull_request" ]; then
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
             FROM_COMMIT="origin/${{ github.base_ref }}"
           else
             FROM_COMMIT="HEAD~1"  # Pour les push directs sur main
           fi
           sfdx sgd:source:delta --to "HEAD" --from "$FROM_COMMIT" --output .temp/delta --source force-app
 
-      - name: Deploy to Production (Push)
+      - name: Deploy to Production
         if: github.ref == 'refs/heads/main'
-        run: |
-          sfdx force:source:deploy --manifest .temp/delta/package.xml --testlevel RunLocalTests
+        run: sfdx force:source:deploy --manifest .temp/delta/package.xml --testlevel RunLocalTests
 
       - name: Validate in PR
         if: github.event_name == 'pull_request'
-        run: |
-          sfdx force:source:deploy --manifest .temp/delta/package.xml --checkonly --testlevel RunLocalTests
+        run: sfdx force:source:deploy --manifest .temp/delta/package.xml --checkonly --testlevel RunLocalTests
