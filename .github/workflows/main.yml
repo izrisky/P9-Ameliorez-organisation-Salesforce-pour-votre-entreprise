@@ -38,69 +38,48 @@ jobs:
           echo "${{ secrets.SFDX_AUTH_URL }}" > sfdx_auth.url
           sfdx auth:sfdxurl:store -f sfdx_auth.url -a prod -d
 
-      # 4. Préparer les refs delta (pull_request ou push)
-      - name: Calculate delta refs
+      - name: Set delta refs (push or PR)
         id: delta-refs
         run: |
-          echo "event: ${{ github.event_name }}"
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            # Pour PR, compare HEAD de la PR à la base (main)
             FROM_REF="origin/${{ github.base_ref }}"
             TO_REF="HEAD"
             git fetch origin ${{ github.base_ref }}:${{ github.base_ref }}
           else
-            # Pour push sur main, compare commit avant et après le push
             FROM_REF="${{ github.event.before }}"
             TO_REF="${{ github.sha }}"
           fi
-          echo "Using FROM_REF=${FROM_REF}"
-          echo "Using TO_REF=${TO_REF}"
           echo "FROM_REF=$FROM_REF" >> $GITHUB_ENV
           echo "TO_REF=$TO_REF" >> $GITHUB_ENV
 
-      # 5. Delta debug (utile pour vérifier vraiment ce qui est DIFF)
-      - name: Debug delta files
-        run: |
-          git diff --name-status $FROM_REF $TO_REF || echo "Diff failed (may be first push or broken context)"
 
-      # 6. Générer le delta (on autorise aucune modif = OK, le step suivant gère tout)
-      - name: Générer le delta Salesforce
+      - name: 'Generate metadata delta pull request'  # Utilisez le plug-in sfdx-git-delta pour effectuer un delta, generer le package xml dans un fichier temporaire ex : .temp
         run: |
           mkdir -p .temp/delta
-          sfdx sgd:source:delta --from "$FROM_REF" --to "$TO_REF" --output-dir .temp/delta --generate-delta --source-dir force-app/main || true
+          sfdx sgd:source:delta \
+            --from "$FROM_REF" --to "$TO_REF" \
+            --output-dir .temp/delta --generate-delta \
+            --source-dir force-app/main || true
 
-      - name: DEBUG Voir temp/delta 
-        run: ls -l .temp/delta; ls -l .temp/delta/force-app; ls -l .temp/delta/package; 
-
-      - name: DEBUG Voir package.xml généré
-        run: ls -l .temp/delta; cat .temp/delta/package.xml || echo "No package.xml"
-
-      
-      # 7. Vérifier si package.xml existe (= il y a du diff à pousser)
-      - name: Check if package.xml exists
+      - name: Check for at least one delta package.xml
         id: check-delta
         run: |
           if [ -f .temp/delta/package/package.xml ]; then
-            echo "package_exists=true"
             echo "package_exists=true" >> "$GITHUB_OUTPUT"
           else
-            echo "package_exists=false"
             echo "package_exists=false" >> "$GITHUB_OUTPUT"
           fi
 
-      # 8. DEPLOIEMENT (Push sur main)
-      - name: Déployer sur PROD après push sur main
+      - name: 'Déployer les métadonnées sur la branch main'
         if: github.event_name == 'push' && steps.check-delta.outputs.package_exists == 'true'
         run: |
           sf project deploy start --manifest .temp/delta/package/package.xml --test-level RunLocalTests --target-org prod --wait 60 --verbose
 
-      # 9. VALIDATION (Pull Request vers main)
       - name: Validation PR (CheckOnly)
         if: github.event_name == 'pull_request' && steps.check-delta.outputs.package_exists == 'true'
         run: |
           sfdx force:source:deploy --manifest .temp/delta/package/package.xml --testlevel RunLocalTests --target-org prod --checkonly --wait 60 --verbose
 
-      # 10. Nettoyage du secret
       - name: Cleanup
         if: always()
         run: rm -f sfdx_auth.url

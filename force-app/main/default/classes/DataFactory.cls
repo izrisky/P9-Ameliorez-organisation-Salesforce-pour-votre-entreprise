@@ -10,8 +10,7 @@ public with sharing class DataFactory {
         Opportunity opp = new Opportunity(
             Name = 'Test Opportunity',
             AccountId = acc.Id,
-            StageName = stageName,
-            CloseDate = closeDate
+            StageName = stageName
         );
         insert opp;
         return opp;
