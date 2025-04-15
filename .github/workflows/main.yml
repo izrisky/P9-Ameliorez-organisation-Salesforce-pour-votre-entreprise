@@ -38,16 +38,26 @@ jobs:
           echo "${{ secrets.SFDX_AUTH_URL }}" > sfdx_auth.url
           sfdx auth:sfdxurl:store -f sfdx_auth.url -a prod -d
 
+      #- name: Generate metadata delta pull request
+      - name: Set delta refs
+        id: delta-refs
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "FROM_REF=origin/${{ github.base_ref }}" >> $GITHUB_ENV
+            echo "TO_REF=HEAD" >> $GITHUB_ENV
+          else
+            echo "FROM_REF=${{ github.event.before }}" >> $GITHUB_ENV
+            echo "TO_REF=${{ github.sha }}" >> $GITHUB_ENV
+          fi
+
+      - name: Fetch all branches
+        run: git fetch --all
+
       - name: Generate metadata delta pull request
         run: |
           mkdir -p .temp/delta
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            TARGET_REF="${{ github.base_ref }}"
-          else
-            TARGET_REF="main"
-          fi
-          sfdx sgd:source:delta --to "HEAD" --from "HEAD~1" --output-dir ".temp/delta" --generate-delta --source-dir force-app
-
+          sfdx sgd:source:delta --to "$TO_REF" --from "$FROM_REF" --output-dir ".temp/delta" --generate-delta --source-dir force-app
+      
       - name: Check if package.xml exists
         id: check-delta
         run: |
