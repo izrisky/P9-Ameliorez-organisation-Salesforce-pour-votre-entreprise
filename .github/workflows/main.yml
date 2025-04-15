@@ -80,7 +80,7 @@ jobs:
       - name: Check if package.xml exists
         id: check-delta
         run: |
-          if [ -f .temp/delta/package.xml ]; then
+          if [ -f .temp/delta/package/package.xml ]; then
             echo "package_exists=true"
           else
             echo "package_exists=false"
@@ -90,13 +90,13 @@ jobs:
       - name: Déployer sur PROD après push sur main
         if: github.event_name == 'push' && steps.check-delta.outputs.package_exists == 'true'
         run: |
-          sfdx force:source:deploy --manifest .temp/delta/package.xml --testlevel RunLocalTests --wait 60 --verbose
+          sfdx force:source:deploy --manifest .temp/delta/package/package.xml --testlevel RunLocalTests --wait 60 --verbose
 
       # 9. VALIDATION (Pull Request vers main)
       - name: Validation PR (CheckOnly)
         if: github.event_name == 'pull_request' && steps.check-delta.outputs.package_exists == 'true'
         run: |
-          sfdx force:source:deploy --manifest .temp/delta/package.xml --testlevel RunLocalTests --checkonly --wait 60 --verbose
+          sfdx force:source:deploy --manifest .temp/delta/package/package.xml --testlevel RunLocalTests --checkonly --wait 60 --verbose
 
       # 10. Nettoyage du secret
       - name: Cleanup
