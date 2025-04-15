@@ -92,7 +92,7 @@ jobs:
       - name: Déployer sur PROD après push sur main
         if: github.event_name == 'push' && steps.check-delta.outputs.package_exists == 'true'
         run: |
-          sfdx force:source:deploy --manifest .temp/delta/package/package.xml --testlevel RunLocalTests --wait 60 --verbose
+          sf project deploy start --manifest .temp/delta/package/package.xml --test-level RunLocalTests --wait 60 --verbose
 
       # 9. VALIDATION (Pull Request vers main)
       - name: Validation PR (CheckOnly)

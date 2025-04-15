@@ -26,7 +26,8 @@ public with sharing class DataFactory {
         PricebookEntry pbe = new PricebookEntry(
             Pricebook2Id = Test.getStandardPricebookId(),
             Product2Id = product.Id,
-            UnitPrice = unitPrice
+            UnitPrice = unitPrice,
+            IsActive = true
         );
         insert pbe;
         return pbe;
