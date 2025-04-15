@@ -1,7 +1,6 @@
 global class UpdateAllAccounts implements Database.Batchable<sObject>{
     
     ///Ce commentaire est ajouter pour tester la pipeline !!!!!!
-    ///Ce commentaire est ajouter pour tester la pipeline !!!!!!
     global Database.QueryLocator start(Database.BatchableContext info){ 
         //Requeter seulement les comptes qui ont au moins une commande avec le Status 'Activated'
         return Database.getQueryLocator('SELECT Id FROM Account');
