@@ -82,10 +82,18 @@ jobs:
 
       # 8. Si un push direct sur main et qu'il y a du delta, déployez les changements sur votre org SF (en environnement prod).
       # Ce déploiement lance aussi les tests locaux grâce à l'option --test-level RunLocalTests.
+      #Test si pas de changments, le step continue sans erreur
       - name: 'Déployer les métadonnées sur la branch main'
         if: github.event_name == 'push' && steps.check-delta.outputs.package_exists == 'true'
         run: |
-          sf project deploy start --manifest .temp/delta/package/package.xml --test-level RunLocalTests --target-org prod --wait 60 --verbose
+          OUTPUT=$(sf project deploy start --manifest .temp/delta/package/package.xml --test-level RunLocalTests --target-org prod --wait 60 --verbose 2>&1)
+          STATUS=$?
+          echo "$OUTPUT"
+          if echo "$OUTPUT" | grep -q "NothingToDeploy"; then
+            echo "Nothing to deploy, exiting gracefully."
+            exit 0
+          fi
+          exit $STATUS
 
       # 9. Si c'est une PR, on fait une validation dry-run (checkonly) pour vérifier que le package peut être déployé,
       # mais sans réellement l'appliquer dans le target org. Cela lance aussi les tests unitaires locaux.
