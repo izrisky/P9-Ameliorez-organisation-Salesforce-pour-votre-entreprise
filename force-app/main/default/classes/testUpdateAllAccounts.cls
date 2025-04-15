@@ -2,7 +2,6 @@
 private class testUpdateAllAccounts {
 
     ///Ce commentaire est ajouter pour tester la pipeline !!!!!!
-    ///Ce commentaire est ajouter pour tester la pipeline !!!!!!
     @isTest static void test() {
         Account acc1 = new Account(Name = 'Test Account 1');
         insert acc1;
