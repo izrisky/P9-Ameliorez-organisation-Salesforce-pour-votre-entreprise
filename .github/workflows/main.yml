@@ -46,7 +46,7 @@ jobs:
           else
             TARGET_REF="main"
           fi
-          sfdx sgd:source:delta --to "HEAD" --from "HEAD~1" --output ".temp/delta" --generate-delta --source force-app
+          sfdx sgd:source:delta --to "HEAD" --from "HEAD~1" --output-dir ".temp/delta" --generate-delta --source-dir force-app
 
       - name: Check if package.xml exists
         id: check-delta
