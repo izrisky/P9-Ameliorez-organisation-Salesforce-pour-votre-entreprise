@@ -28,42 +28,31 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
 
-      - name: Install SFDX CLI and sfdx-git-delta plugin #  Ce package va vous permettre de faire un delta entre votre branche et la branch ciblé. Voici la documentation : https://github.com/scolladon/sfdx-git-delta
+      - name: Install SFDX CLI and sfdx-git-delta plugin # Ce package va vous permettre de faire un delta entre votre branche et la branch ciblé. Voici la documentation : https://github.com/scolladon/sfdx-git-delta
         run: |
-          npm install -g @salesforce/cli
-          echo y | sf plugins install sfdx-git-delta
-          sf plugins
+          npm install -g @salesforce/cli@latest
+          echo "y" | npm install sfdx-git-delta@3.3.0 -g
 
       - name: 'Authentification Salesforce' # Vous devez avoir une connexion avec Salesforce pour pouvoir deployer le code à la dernière étape.
         run: |
           echo "${{ secrets.SFDX_AUTH_URL }}" > sfdx_auth.url
-          sf org login sfdx-url -f sfdx_auth.url -a prod -d
+          sfdx auth:sfdxurl:store -f sfdx_auth.url -a prod -d
 
       - name: 'Generate metadata delta pull request'  # Utilisez le plug-in sfdx-git-delta pour effectuer un delta, generer le package xml dans un fichier temporaire ex : .temp
         run: |
           mkdir -p .temp/delta
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             TARGET_REF="${{ github.base_ref }}"
-            sf sgd source delta --to HEAD --from origin/$TARGET_REF --output .temp/delta --generate-delta --source force-app
           else
-            git fetch origin main
-            PREV_COMMIT=$(git rev-parse HEAD~1)
-            sf sgd source delta --to HEAD --from $PREV_COMMIT --output .temp/delta --generate-delta --source force-app
+            TARGET_REF="main"
           fi
-      - name: Debug delta directory
-        run: |
-          ls -la .temp/delta/
-          echo "Current commit: $(git rev-parse HEAD)"
-          echo "Previous commit: $(git rev-parse HEAD~1)"
-          echo "Changes in force-app directory:"
-          git diff --name-only HEAD HEAD~1 -- force-app/
+          sfdx sgd:source:delta --to "HEAD" --from "origin/$TARGET_REF" --output ".temp/delta" --generate-delta --source force-app
 
       - name: Check if package.xml exists
         id: check-delta
         run: |
           if [ -f .temp/delta/package.xml ]; then
             echo "package_exists=true" >> "$GITHUB_OUTPUT"
-            cat .temp/delta/package.xml
           else
             echo "No metadata changes found. Skipping deploy/validate."
             echo "package_exists=false" >> "$GITHUB_OUTPUT"
@@ -72,13 +61,13 @@ jobs:
       - name: Deploy metadata to production
         if: github.ref == 'refs/heads/main' && steps.check-delta.outputs.package_exists == 'true'
         run: |
-          sf project deploy start --manifest .temp/delta/package.xml --test-level RunLocalTests --verbose
-      
+          sfdx force:source:deploy --manifest .temp/delta/package.xml --testlevel RunLocalTests --verbose
+
       - name: Validate metadata on pull request
         if: github.event_name == 'pull_request' && steps.check-delta.outputs.package_exists == 'true'
         run: |
-          sf project deploy validate --manifest .temp/delta/package.xml --test-level RunLocalTests --verbose
-      
+          sfdx force:source:deploy --manifest .temp/delta/package.xml --testlevel RunLocalTests --checkonly --verbose
+
       - name: Cleanup
         if: always()
         run: rm -f sfdx_auth.url
