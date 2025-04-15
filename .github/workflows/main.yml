@@ -67,7 +67,7 @@ jobs:
       - name: Générer le delta
         run: |
           mkdir -p .temp/delta
-          sfdx sgd:source:delta --from "$FROM_REF" --to "$TO_REF" --output-dir ".temp/delta" --generate-delta --source-dir force-app/main
+          sfdx sgd:source:delta --from "$FROM_REF" --to "$TO_REF" --output-dir ".temp/delta" --generate-delta --source-dir force-app/main || true
       
       # 7. Vérifier si package.xml existe (= il y a du diff à pousser)
       - name: Check if package.xml exists
