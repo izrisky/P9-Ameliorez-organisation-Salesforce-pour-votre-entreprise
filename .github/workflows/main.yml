@@ -74,9 +74,9 @@ jobs:
         id: check-delta
         run: |
           if [ -f .temp/delta/package.xml ]; then
-            echo "package_exists=true" >> "$GITHUB_OUTPUT"
+            echo "package_exists=true"
           else
-            echo "package_exists=false" >> "$GITHUB_OUTPUT"
+            echo "package_exists=false"
           fi
 
       # 8. DEPLOIEMENT (Push sur main)
