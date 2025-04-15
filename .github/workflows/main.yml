@@ -47,8 +47,28 @@ jobs:
             TARGET_REF="main"
           fi
           sfdx sgd:source:delta --to "HEAD" --from "origin/$TARGET_REF" --output ".temp/delta" --generate-delta --source force-app
+      
+      - name: Check if package.xml exists
+        id: check-delta
+        run: |
+          if [ -f .temp/delta/package.xml ]; then
+            echo "package_exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No metadata changes found. Skipping deploy/validate."
+            echo "package_exists=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: 'Déployer les métadonnées sur la branch main'
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main' && steps.check-delta.outputs.package_exists == 'true'
         run: |
-          sfdx force:source:deploy --manifest .temp/delta/package.xml --testlevel RunLocalTests --verbose  # A faire déployer le code venant du fichier package.xml généré précédemment 
+          sfdx force:source:deploy --manifest .temp/delta/package.xml --testlevel RunLocalTests --verbose
+
+      - name: 'Valider les métadonnées sur pull request'
+        if: github.event_name == 'pull_request' && steps.check-delta.outputs.package_exists == 'true'
+        run: |
+          sfdx force:source:deploy --manifest .temp/delta/package.xml --testlevel RunLocalTests --checkonly --verbose
+      
+      - name: Cleanup
+        if: always()
+        run: rm -f sfdx_auth.url
+      
