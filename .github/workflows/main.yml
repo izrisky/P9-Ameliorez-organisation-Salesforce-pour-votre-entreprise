@@ -1,5 +1,6 @@
 name: Deploy and Validate Metadata
 
+# Déclencheurs : ce workflow s'exécutera lors d'un push ou d'une pull request sur la branche main.
 on:
   pull_request:
     branches:
@@ -12,32 +13,38 @@ on:
 jobs:
   sfdxvalidate:
     name: "Run SFDX Validate"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest  # Utilise l'image Ubuntu la plus récente pour runner l'action
 
     strategy:
       matrix:
-        node-version: [18.x]
+        node-version: [18.x]  # Permet d'utiliser différentes versions de Node.js si tu veux en tester plusieurs
 
     steps:
+      # 1. Récupère le code source – fetch-depth:0 permet une récupération complète, utile pour les comparaisons de branches (delta)
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0 
 
+      # 2. Configure Node.js (ici la version 18.x issue du matrix)
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
 
-      - name: Install SFDX CLI and sfdx-git-delta plugin # Ce package va vous permettre de faire un delta entre votre branche et la branch ciblé. Voici la documentation : https://github.com/scolladon/sfdx-git-delta
+      # 3. Installation du CLI Salesforce et du plugin sfdx-git-delta
+      # Le plugin sfdx-git-delta servira à générer le delta de métadonnées entre deux commits/références git.Voici la documentation : https://github.com/scolladon/sfdx-git-delta
+      - name: Install SFDX CLI and sfdx-git-delta plugin 
         run: |
           npm install -g @salesforce/cli@latest
           echo "y" | sf plugins install sfdx-git-delta@v6.0.0
 
+      # 4. Authentification sur Salesforce à l'aide d'un SFDX_AUTH_URL stocké de façon sécurisée dans les secrets GitHub
       - name: Authentification Salesforce
         run: |
           echo "${{ secrets.SFDX_AUTH_URL }}" > sfdx_auth.url
           sfdx auth:sfdxurl:store -f sfdx_auth.url -a prod -d
 
+      # 5. Préparation des refs git pour le delta (en fonction du type d'événement : PR ou push)
       - name: Set delta refs (push or PR)
         id: delta-refs
         run: |
@@ -52,7 +59,8 @@ jobs:
           echo "FROM_REF=$FROM_REF" >> $GITHUB_ENV
           echo "TO_REF=$TO_REF" >> $GITHUB_ENV
 
-
+      # 6. Génération du delta (différence de métadonnées) grâce à sfdx-git-delta.
+      # Les métadonnées modifiées sont exportées vers le dossier .temp/delta et un package.xml temporaire est généré.
       - name: 'Generate metadata delta pull request'  # Utilisez le plug-in sfdx-git-delta pour effectuer un delta, generer le package xml dans un fichier temporaire ex : .temp
         run: |
           mkdir -p .temp/delta
@@ -61,6 +69,8 @@ jobs:
             --output-dir .temp/delta --generate-delta \
             --source-dir force-app/main || true
 
+      # 7. Vérifie si un package.xml delta a bien été généré (au moins un fichier de métadonnées a changé)
+      # Cette étape met une variable de sortie "package_exists" à true ou false selon le cas.
       - name: Check for at least one delta package.xml
         id: check-delta
         run: |
@@ -70,16 +80,21 @@ jobs:
             echo "package_exists=false" >> "$GITHUB_OUTPUT"
           fi
 
+      # 8. Si un push direct sur main et qu'il y a du delta, déployez les changements sur votre org SF (en environnement prod).
+      # Ce déploiement lance aussi les tests locaux grâce à l'option --test-level RunLocalTests.
       - name: 'Déployer les métadonnées sur la branch main'
         if: github.event_name == 'push' && steps.check-delta.outputs.package_exists == 'true'
         run: |
           sf project deploy start --manifest .temp/delta/package/package.xml --test-level RunLocalTests --target-org prod --wait 60 --verbose
 
+      # 9. Si c'est une PR, on fait une validation dry-run (checkonly) pour vérifier que le package peut être déployé,
+      # mais sans réellement l'appliquer dans le target org. Cela lance aussi les tests unitaires locaux.
       - name: Validation PR (CheckOnly)
         if: github.event_name == 'pull_request' && steps.check-delta.outputs.package_exists == 'true'
         run: |
           sfdx force:source:deploy --manifest .temp/delta/package/package.xml --testlevel RunLocalTests --target-org prod --checkonly --wait 60 --verbose
 
+      # 10. Nettoyage du fichier d'authentification pour ne pas laisser de secrets sur le runner.
       - name: Cleanup
         if: always()
         run: rm -f sfdx_auth.url
