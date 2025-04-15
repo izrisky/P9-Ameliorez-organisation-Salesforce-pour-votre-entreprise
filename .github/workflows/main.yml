@@ -86,6 +86,7 @@ jobs:
       - name: 'Déployer les métadonnées sur la branch main'
         if: github.event_name == 'push' && steps.check-delta.outputs.package_exists == 'true'
         run: |
+          set +e
           OUTPUT=$(sf project deploy start --manifest .temp/delta/package/package.xml --test-level RunLocalTests --target-org prod --wait 60 --verbose 2>&1)
           STATUS=$?
           echo "$OUTPUT"
