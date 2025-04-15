@@ -69,8 +69,12 @@ jobs:
           mkdir -p .temp/delta
           sfdx sgd:source:delta --from "$FROM_REF" --to "$TO_REF" --output-dir .temp/delta --generate-delta --source-dir force-app/main || true
 
+      - name: DEBUG Voir temp/delta 
+        run: ls -l .temp/delta; ls -l .temp/delta/force-app; ls -l .temp/delta/package; 
+
       - name: DEBUG Voir package.xml généré
         run: ls -l .temp/delta; cat .temp/delta/package.xml || echo "No package.xml"
+
       
       # 7. Vérifier si package.xml existe (= il y a du diff à pousser)
       - name: Check if package.xml exists
