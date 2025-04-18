@@ -1,4 +1,5 @@
-public with sharing class DataFactory {    
+@isTest
+public class DataFactory {    
     //Test pipeline
     //Test pipeline
     public static Account createAccount(String name) {
