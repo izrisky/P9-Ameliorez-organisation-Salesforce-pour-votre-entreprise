@@ -1,11 +1,6 @@
-@isTest(seeAllData=true)
-public class MyTeamOrdersControllerTest {
+@isTest
+public class OrderControllerTest {
 
-    //Test pipeline
-    //Test pipeline
-    //Test pipeline
-    //Test pipeline
-    //Test pipeline
 // Méthode utilitaire pour créer un Order activé avec un Order Item
 // Le TotalAmount sera calculé automatiquement par le système (UnitPrice * Quantity)
 private static Order createActivatedOrder(Account acc, Decimal unitPrice, Integer quantity) {
@@ -45,7 +40,7 @@ static void testGetSumOrdersByAccountWithActivatedOrders() {
     // draftOrder reste en statut 'Draft'
     
     // Appel de la méthode qui effectue l'agrégation sur les Orders activés
-    Decimal sumActivated = MyTeamOrdersController.getSumOrdersByAccount(acc.Id);
+    Decimal sumActivated = OrderController.getSumOrdersByAccount(acc.Id);
     
     // Calcul de la somme attendue via les TotalAmount calculés sur les Orders activés
     Decimal expected = (activatedOrder1.TotalAmount != null ? activatedOrder1.TotalAmount : 0) +
@@ -70,7 +65,7 @@ static void testGetSumOrdersByAccountWithoutActivatedOrders() {
     // Le statut reste 'Draft'
     
     // Appel de la méthode : aucun Order étant activé, l'agrégation doit renvoyer null
-    Decimal sumActivated = MyTeamOrdersController.getSumOrdersByAccount(acc.Id);
+    Decimal sumActivated = OrderController.getSumOrdersByAccount(acc.Id);
     System.assertEquals(null, sumActivated, 'Aucun Order activé doit renvoyer null.');
 }
 }
