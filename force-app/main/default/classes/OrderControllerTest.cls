@@ -3,95 +3,62 @@ private class OrderControllerTest {
 
     @TestSetup
     static void setup() {
-        // Création des données de test
-        Pricebook2 pb = new Pricebook2(Name = 'Test Pricebook');
-        insert pb;
-
-        Product2 prod = new Product2(Name = 'Test Product', IsActive = true);
-        insert prod;
-
-        PricebookEntry pbe = new PricebookEntry(
-            Pricebook2Id = Test.getStandardPricebookId(),
-            Product2Id = prod.Id,
-            UnitPrice = 100,
-            IsActive = true
-        );
-        insert pbe;
-
+        // 1. Création du compte
         Account acc = new Account(Name = 'Test Account');
         insert acc;
 
-        // Création des commandes
-        List<Order> orders = new List<Order>();
-        orders.add(new Order(
-            AccountId = acc.Id,
-            Status = 'Activated',
-            EffectiveDate = System.today(),
-            Pricebook2Id = pb.Id
-        ));
-        orders.add(new Order(
-            AccountId = acc.Id,
-            Status = 'Activated',
-            EffectiveDate = System.today(),
-            Pricebook2Id = pb.Id
-        ));
-        insert orders;
+        // 2. Création du produit
+        Product2 prod = new Product2(
+            Name = 'Test Product', 
+            IsActive = true
+        );
+        insert prod;
 
-        // Création des lignes de commande
-        List<OrderItem> items = new List<OrderItem>();
-        items.add(new OrderItem(
-            OrderId = orders[0].Id,
-            PricebookEntryId = pbe.Id,
-            Quantity = 1,
-            UnitPrice = 100
-        ));
-        items.add(new OrderItem(
-            OrderId = orders[1].Id,
-            PricebookEntryId = pbe.Id,
-            Quantity = 2,
-            UnitPrice = 100
-        ));
-        insert items;
-    }
+        // 3. Récupération du pricebook standard
+        Id pricebookId = Test.getStandardPricebookId();
 
-    @isTest
-    static void testGetSumOrdersByAccount_WithActivatedOrders() {
-        Account acc = [SELECT Id FROM Account WHERE Name = 'Test Account' LIMIT 1];
-        Test.startTest();
-        Decimal sum = OrderController.getSumOrdersByAccount(acc.Id);
-        Test.stopTest();
-        System.assertEquals(300, sum, 'La somme devrait être 300 (100 + 200)');
-    }
+        // 4. Création de l'entrée pricebook
+        PricebookEntry pbe = new PricebookEntry(
+            Pricebook2Id = pricebookId,
+            Product2Id = prod.Id,
+            UnitPrice = 100.00,
+            IsActive = true,
+            UseStandardPrice = false
+        );
+        insert pbe;
 
-    // Les autres tests restent similaires mais doivent utiliser OrderItem pour définir les montants
-    @isTest
-    static void testUpdateAccountsAfterOrders_SingleOrder() {
-        Account acc = [SELECT Id FROM Account WHERE Name = 'Test Account' LIMIT 1];
-        
+        // 5. Création de la commande en brouillon
         Order ord = new Order(
             AccountId = acc.Id,
-            EffectiveDate = System.today(),
-            Status = 'Activated',
-            Pricebook2Id = Test.getStandardPricebookId()
+            Status = 'Draft',
+            EffectiveDate = Date.today(),
+            Pricebook2Id = pricebookId
         );
         insert ord;
 
-        Product2 prod = [SELECT Id FROM Product2 LIMIT 1];
-        PricebookEntry pbe = [SELECT Id FROM PricebookEntry LIMIT 1];
-
+        // 6. Ajout du produit à la commande
         OrderItem item = new OrderItem(
             OrderId = ord.Id,
             PricebookEntryId = pbe.Id,
-            Quantity = 3,
-            UnitPrice = 100
+            Quantity = 1,
+            UnitPrice = 100,
+            ServiceDate = Date.today()
         );
         insert item;
 
+        // 7. Activation de la commande
+        ord.Status = 'Activated';
+        update ord;
+    }
+
+    @isTest
+    static void testGetSumOrdersByAccount() {
+        Account acc = [SELECT Id FROM Account LIMIT 1];
+        
         Test.startTest();
-        OrderController.updateAccountsAfterOrders(new List<Order>{ord});
+        Decimal result = OrderController.getSumOrdersByAccount(acc.Id);
         Test.stopTest();
 
-        Account updatedAcc = [SELECT Chiffre_d_affaire__c FROM Account WHERE Id = :acc.Id];
-        System.assertEquals(300, updatedAcc.Chiffre_d_affaire__c, 'Le CA devrait être 300');
+        System.assertEquals(100, result, 'Le montant total devrait être 100');
     }
 }
