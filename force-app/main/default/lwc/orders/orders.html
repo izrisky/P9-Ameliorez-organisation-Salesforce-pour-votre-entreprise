@@ -1,9 +1,12 @@
 <template>
-    <div class="slds-box slds-theme_error" >
-        <h1>Erreur, pas de commandes rattachées à ce compte ou le montant des commandes sont inférieurs à 0.</h1>
-    </div>
-    <!-- Si la valeur de "sumOrdersOfCurrentAccount" est vide ou égale a Zero, je souhaite afficher un message d'erreur -->
-    <div class="slds-box slds-theme_success" >
-        <h1>Total des Commandes : {sumOrdersOfCurrentAccount}</h1>
-    </div>
+	<template if:true={sumOrdersOfCurrentAccount}>
+		<div class="slds-box slds-theme_success"> 
+			<h1>Total des Commandes : {sumOrdersOfCurrentAccount}</h1> 
+		</div> 
+	</template>
+	<template if:false={sumOrdersOfCurrentAccount}>
+		<div class="slds-box slds-theme_error">
+			<h1>Erreur, pas de commandes rattachées au compte ou montant total égal à zéro.</h1> 
+		</div>
+	</template> 
 </template>

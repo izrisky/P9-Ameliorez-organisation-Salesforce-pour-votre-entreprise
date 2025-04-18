@@ -1,0 +1,125 @@
+public static void setupTestData() {
+    List<Account> accounts = new List<Account>();
+    List<Product2> products = new List<Product2>();
+    List<PricebookEntry> pricebookEntries = new List<PricebookEntry>();
+    List<Order> orders = new List<Order>();
+    List<OrderItem> orderItems = new List<OrderItem>();
+    List<Opportunity> opportunities = new List<Opportunity>();
+    
+    Id standardPricebookId = [SELECT Id FROM Pricebook2 WHERE IsStandard = true LIMIT 1].Id;
+
+    // Create Accounts with 100+ Orders
+    for (Integer i = 0; i < 5; i++) {
+        Account acc = new Account(Name = 'Test Account ' + i);
+        accounts.add(acc);
+    }
+    insert accounts;
+
+    for (Account acc : accounts) {
+        Product2 product = new Product2(Name = 'Test Product ' + acc.Name, Family = 'Test Family');
+        products.add(product);
+    }
+    insert products;
+    
+    for (Product2 product : products) {
+        PricebookEntry pbe = new PricebookEntry(
+            Pricebook2Id = standardPricebookId,
+            Product2Id = product.Id,
+            UnitPrice = 100,
+            IsActive = true
+        );
+        pricebookEntries.add(pbe);
+    }
+    insert pricebookEntries;
+
+    for (Account acc : accounts) {
+        for (Integer j = 0; j < 101; j++) {
+            Order order = new Order(
+                AccountId = acc.Id,
+                Status = 'Draft',
+                EffectiveDate = Date.today(),
+                Pricebook2Id = standardPricebookId
+            );
+            orders.add(order);
+        }
+    }
+    insert orders;
+
+    for (Order order : orders) {
+        PricebookEntry pbe = pricebookEntries[0];
+        orderItems.add(new OrderItem(OrderId = order.Id, PricebookEntryId = pbe.Id, Quantity = 10, UnitPrice = 100));
+        orderItems.add(new OrderItem(OrderId = order.Id, PricebookEntryId = pbe.Id, Quantity = 20, UnitPrice = 100));
+    }
+    insert orderItems;
+
+    for (Account acc : accounts) {
+        Opportunity opp = new Opportunity(
+            Name = 'Opportunity for ' + acc.Name,
+            AccountId = acc.Id,
+            StageName = 'Prospecting',
+            CloseDate = Date.today().addDays(30)
+        );
+        opportunities.add(opp);
+    }
+    insert opportunities;
+
+    // Create test data specifically for LWC issues
+    Account accForLWC = new Account(Name = 'LWC Test Account');
+    insert accForLWC;
+
+    Product2 productForLWC = new Product2(Name = 'LWC Test Product', Family = 'LWC Family');
+    insert productForLWC;
+    
+    PricebookEntry pbeForLWC = new PricebookEntry(
+        Pricebook2Id = standardPricebookId,
+        Product2Id = productForLWC.Id,
+        UnitPrice = 50,
+        IsActive = true
+    );
+    insert pbeForLWC;
+
+    Order lwcOrder = new Order(
+        AccountId = accForLWC.Id,
+        Status = 'Draft',
+        EffectiveDate = Date.today(),
+        Pricebook2Id = standardPricebookId
+    );
+    insert lwcOrder;
+
+    orderItems = new List<OrderItem>{
+        new OrderItem(OrderId = lwcOrder.Id, PricebookEntryId = pbeForLWC.Id, Quantity = 5, UnitPrice = 50),
+        new OrderItem(OrderId = lwcOrder.Id, PricebookEntryId = pbeForLWC.Id, Quantity = -5, UnitPrice = 50) // To trigger LWC error message
+    };
+    insert orderItems;
+}
+
+    public static void createOrderForDataLoader() {
+        // Créer un compte
+        Account acc = new Account(Name = 'Test Account for Data Loader');
+        insert acc;
+
+        // Créer un produit
+        Product2 prod = new Product2(Name = 'Test Product', Family = 'Test Family');
+        insert prod;
+
+        // Créer une entrée de prix pour ce produit
+        PricebookEntry pbe = new PricebookEntry(
+            Pricebook2Id = [SELECT Id FROM Pricebook2 WHERE IsStandard = true LIMIT 1].Id,
+            Product2Id = prod.Id,
+            UnitPrice = 20.0,
+            IsActive = true
+        );
+        insert pbe;
+
+        // Créer la commande
+        Order order = new Order(
+            AccountId = acc.Id,
+            Status = 'Draft',
+            Pricebook2Id = pbe.Pricebook2Id, // Assurez-vous que la commande utilise le bon Pricebook ID
+            EffectiveDate = Date.today()
+        );
+        insert order;
+        
+        // Imprimez l'ID de la commande pour l'utiliser dans le fichier CSV
+        System.debug('Order created with ID: ' + order.Id);
+    }
