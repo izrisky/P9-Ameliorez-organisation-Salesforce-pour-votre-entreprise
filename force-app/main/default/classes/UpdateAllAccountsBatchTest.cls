@@ -1,5 +1,5 @@
 @isTest
-private class TestUpdateAllAccountsBatch {
+private class UpdateAllAccountsBatchTest {
     //Test pipeline
     //Test pipeline   //Test pipeline
 @isTest static void testBatchExecution() {

@@ -1,9 +1,11 @@
-trigger OrderTrigger on SOBJECT (before insert) {
-    if (Trigger.isBefore && Trigger.isUpdate) {
-        OrderController.handleBeforeUpdate(Trigger.new);
+trigger OrderTrigger on Order (before insert, before update, after update) {
+    // Before Insert/Update : Calcul du NetAmount
+    if (Trigger.isBefore && (Trigger.isInsert || Trigger.isUpdate)) {
+        OrderController.updateOrderNetAmounts(Trigger.new);
     }
-    
+
+    // After Update : Mise à jour des comptes
     if (Trigger.isAfter && Trigger.isUpdate) {
-        OrderController.handleAfterUpdate(Trigger.new);
+        OrderController.updateAccountsAfterOrders(Trigger.new);
     }
 }
