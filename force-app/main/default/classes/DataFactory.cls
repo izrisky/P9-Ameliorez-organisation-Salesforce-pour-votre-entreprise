@@ -1,5 +1,4 @@
-public with sharing class DataFactory {
-    //Test pipeline    
+public with sharing class DataFactory {    
     public static Account createAccount(String name) {
         Account acc = new Account(Name = name);
         insert acc;
