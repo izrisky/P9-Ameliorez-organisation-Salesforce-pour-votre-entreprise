@@ -21,46 +21,49 @@
  */
 @isTest
 private class MyTeamOrdersControllerTest {
-@isTest static void testGetSumOrdersByAccountWithActivatedOrders() {
+@isTest
+static void testGetSumOrdersByAccountWithActivatedOrders() {
 // Création d'un compte de test
 Account acc = new Account(Name = 'Test Account');
 insert acc;
 
-    // Récupérer l'ID Pricebook standard requis pour créer des Orders
     Id pbId = Test.getStandardPricebookId();
     
-    // Création d'orders pour le compte avec différents statuts
+    // Création d'un Order "Activated" en utilisant put() pour définir TotalAmount
     Order activatedOrder1 = new Order(
         AccountId = acc.Id,
-        TotalAmount = 100,
         Status = 'Activated',
         EffectiveDate = Date.today(),
         Pricebook2Id = pbId
     );
+    activatedOrder1.put('TotalAmount', 100);
     
     Order activatedOrder2 = new Order(
         AccountId = acc.Id,
-        TotalAmount = 150,
         Status = 'Activated',
         EffectiveDate = Date.today(),
         Pricebook2Id = pbId
     );
+    activatedOrder2.put('TotalAmount', 150);
     
+    // Création d'un Order avec un autre status (qui ne doit pas être comptabilisé)
     Order nonActivatedOrder = new Order(
         AccountId = acc.Id,
-        TotalAmount = 200,
         Status = 'Draft',
         EffectiveDate = Date.today(),
         Pricebook2Id = pbId
     );
+    nonActivatedOrder.put('TotalAmount', 200);
+    
     insert new List<Order>{activatedOrder1, activatedOrder2, nonActivatedOrder};
     
-    // Appel de la méthode et vérification que seule la somme des commandes 'Activated' est retournée
+    // Appel de la méthode en passant l'Id du compte et vérification que seule la somme des Orders "Activated" est retournée
     Decimal sumActivated = MyTeamOrdersController.getSumOrdersByAccount(acc.Id);
-    System.assertEquals(250, sumActivated, 'La somme des orders activés devrait être 250 (100 + 150).');
+    System.assertEquals(250, sumActivated, 'La somme des orders activés devrait être égale à 250 (100 + 150).');
 }
 
-@isTest static void testGetSumOrdersByAccountWithoutActivatedOrders() {
+@isTest 
+static void testGetSumOrdersByAccountWithoutActivatedOrders() {
     // Création d'un compte pour lequel aucun Order n'est en statut "Activated"
     Account acc = new Account(Name = 'Test Account No Activated');
     insert acc;
@@ -68,15 +71,15 @@ insert acc;
     Id pbId = Test.getStandardPricebookId();
     Order nonActivatedOrder = new Order(
         AccountId = acc.Id,
-        TotalAmount = 300,
         Status = 'Draft',
         EffectiveDate = Date.today(),
         Pricebook2Id = pbId
     );
+    nonActivatedOrder.put('TotalAmount', 300);
     insert nonActivatedOrder;
     
-    // Appel de la méthode : la somme devrait être nulle si aucun order n'est activé
+    // Appel de la méthode : la somme devrait être null si aucun order n'est activé
     Decimal sumActivated = MyTeamOrdersController.getSumOrdersByAccount(acc.Id);
-    System.assertEquals(null, sumActivated, 'Aucune order activée ne doit renvoyer null.');
+    System.assertEquals(null, sumActivated, 'Aucun order activé doit retourner null.');
 }
 }
