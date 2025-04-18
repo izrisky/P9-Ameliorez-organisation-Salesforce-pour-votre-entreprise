@@ -19,67 +19,71 @@
  *
  * See the Apex Language Reference for more information about Testing and Code Coverage.
  */
-@isTest
-private class MyTeamOrdersControllerTest {
-@isTest
-static void testGetSumOrdersByAccountWithActivatedOrders() {
-// Création d'un compte de test
-Account acc = new Account(Name = 'Test Account');
-insert acc;
+@isTest(seeAllData=true)
+public class MyTeamOrdersControllerTest {
 
-    Id pbId = Test.getStandardPricebookId();
+// Méthode utilitaire pour créer un Order activé avec un Order Item
+// Le TotalAmount sera calculé automatiquement par le système (UnitPrice * Quantity)
+private static Order createActivatedOrder(Account acc, Decimal unitPrice, Integer quantity) {
+    // Création de l'Order via DataFactory (la requête sur Pricebook2 fonctionne avec seeAllData=true)
+    Order ord = DataFactory.createOrder(acc);
     
-    // Création d'un Order "Activated" en utilisant put() pour définir TotalAmount
-    Order activatedOrder1 = new Order(
-        AccountId = acc.Id,
-        Status = 'Activated',
-        EffectiveDate = Date.today(),
-        Pricebook2Id = pbId
-    );
-    activatedOrder1.put('TotalAmount', 100);
+    // Créez un produit et une entrée de Pricebook pour pouvoir créer un OrderItem
+    Product2 prod = DataFactory.createProduct('Test Product ' + System.currentTimeMillis(), 'Test');
+    PricebookEntry pbe = DataFactory.createPricebookEntry(prod, unitPrice);
     
-    Order activatedOrder2 = new Order(
-        AccountId = acc.Id,
-        Status = 'Activated',
-        EffectiveDate = Date.today(),
-        Pricebook2Id = pbId
-    );
-    activatedOrder2.put('TotalAmount', 150);
+    // Création d'un OrderItem afin de permettre le calcul du TotalAmount
+    DataFactory.createOrderItem(ord, pbe, quantity);
     
-    // Création d'un Order avec un autre status (qui ne doit pas être comptabilisé)
-    Order nonActivatedOrder = new Order(
-        AccountId = acc.Id,
-        Status = 'Draft',
-        EffectiveDate = Date.today(),
-        Pricebook2Id = pbId
-    );
-    nonActivatedOrder.put('TotalAmount', 200);
+    // Mise à jour de l'Order en définissant le statut à 'Activated'
+    ord.Status = 'Activated';
+    update ord;
     
-    insert new List<Order>{activatedOrder1, activatedOrder2, nonActivatedOrder};
+    // Récupérer l'Order mis à jour avec son TotalAmount calculé
+    return [SELECT Id, TotalAmount FROM Order WHERE Id = :ord.Id];
+}
+
+@isTest 
+static void testGetSumOrdersByAccountWithActivatedOrders() {
+    // Création d'un compte de test
+    Account acc = new Account(Name = 'Test Account');
+    insert acc;
     
-    // Appel de la méthode en passant l'Id du compte et vérification que seule la somme des Orders "Activated" est retournée
+    // Création de deux Orders activés avec des Order Items
+    Order activatedOrder1 = createActivatedOrder(acc, 100, 1);  // Total attendu = 100
+    Order activatedOrder2 = createActivatedOrder(acc, 150, 2);  // Total attendu = 300
+    
+    // Création d'un Order non activé (statut Draft) qui ne doit pas être comptabilisé
+    Order draftOrder = DataFactory.createOrder(acc);
+    Product2 prod = DataFactory.createProduct('Draft Product', 'Test');
+    PricebookEntry pbe = DataFactory.createPricebookEntry(prod, 200);
+    DataFactory.createOrderItem(draftOrder, pbe, 1);
+    // draftOrder reste en statut 'Draft'
+    
+    // Appel de la méthode qui effectue l'agrégation sur les Orders activés
     Decimal sumActivated = MyTeamOrdersController.getSumOrdersByAccount(acc.Id);
-    System.assertEquals(250, sumActivated, 'La somme des orders activés devrait être égale à 250 (100 + 150).');
+    
+    // Calcul de la somme attendue via les TotalAmount calculés sur les Orders activés
+    Decimal expected = (activatedOrder1.TotalAmount != null ? activatedOrder1.TotalAmount : 0) +
+                       (activatedOrder2.TotalAmount != null ? activatedOrder2.TotalAmount : 0);
+    System.assertEquals(expected, sumActivated, 'La somme des Orders activés doit être égale à la somme des TotalAmount des orders activés.');
 }
 
 @isTest 
 static void testGetSumOrdersByAccountWithoutActivatedOrders() {
-    // Création d'un compte pour lequel aucun Order n'est en statut "Activated"
+    // Création d'un compte pour lequel aucun Order n'est activé
     Account acc = new Account(Name = 'Test Account No Activated');
     insert acc;
     
-    Id pbId = Test.getStandardPricebookId();
-    Order nonActivatedOrder = new Order(
-        AccountId = acc.Id,
-        Status = 'Draft',
-        EffectiveDate = Date.today(),
-        Pricebook2Id = pbId
-    );
-    nonActivatedOrder.put('TotalAmount', 300);
-    insert nonActivatedOrder;
+    // Création d'un Order en statut Draft et ajout d'un Order Item
+    Order draftOrder = DataFactory.createOrder(acc);
+    Product2 prod = DataFactory.createProduct('Non activated Product', 'Test');
+    PricebookEntry pbe = DataFactory.createPricebookEntry(prod, 200);
+    DataFactory.createOrderItem(draftOrder, pbe, 1);
+    // Le statut reste 'Draft'
     
-    // Appel de la méthode : la somme devrait être null si aucun order n'est activé
+    // Appel de la méthode : aucun Order étant activé, l'agrégation doit renvoyer null
     Decimal sumActivated = MyTeamOrdersController.getSumOrdersByAccount(acc.Id);
-    System.assertEquals(null, sumActivated, 'Aucun order activé doit retourner null.');
+    System.assertEquals(null, sumActivated, 'Aucun Order activé doit renvoyer null.');
 }
 }
