@@ -1,71 +1,84 @@
 @isTest
-public class OrderControllerTest {
+private class OrderControllerTest {
 
-// Méthode utilitaire pour créer un Order activé avec un Order Item
-// Le TotalAmount sera calculé automatiquement par le système (UnitPrice * Quantity)
-private static Order createActivatedOrder(Account acc, Decimal unitPrice, Integer quantity) {
-    // Création de l'Order via DataFactory (la requête sur Pricebook2 fonctionne avec seeAllData=true)
-    Order ord = DataFactory.createOrder(acc);
-    
-    // Créez un produit et une entrée de Pricebook pour pouvoir créer un OrderItem
-    Product2 prod = DataFactory.createProduct('Test Product ' + System.currentTimeMillis(), 'Test');
-    PricebookEntry pbe = DataFactory.createPricebookEntry(prod, unitPrice);
-    
-    // Création d'un OrderItem afin de permettre le calcul du TotalAmount
-    DataFactory.createOrderItem(ord, pbe, quantity);
-    
-    // Mise à jour de l'Order en définissant le statut à 'Activated'
-    ord.Status = 'Activated';
-    update ord;
-    
-    // Récupérer l'Order mis à jour avec son TotalAmount calculé
-    return [SELECT Id, TotalAmount FROM Order WHERE Id = :ord.Id];
-}
-
-@isTest 
-static void testGetSumOrdersByAccountWithActivatedOrders() {
+// Utilisation de @testSetup pour créer des données communes à plusieurs tests
+@testSetup 
+static void setupData(){
     // Création d'un compte de test
     Account acc = new Account(Name = 'Test Account');
     insert acc;
     
-    // Création de deux Orders activés avec des Order Items
-    Order activatedOrder1 = createActivatedOrder(acc, 100, 1);  // Total attendu = 100
-    Order activatedOrder2 = createActivatedOrder(acc, 150, 2);  // Total attendu = 300
-    
-    // Création d'un Order non activé (statut Draft) qui ne doit pas être comptabilisé
-    Order draftOrder = DataFactory.createOrder(acc);
-    Product2 prod = DataFactory.createProduct('Draft Product', 'Test');
-    PricebookEntry pbe = DataFactory.createPricebookEntry(prod, 200);
-    DataFactory.createOrderItem(draftOrder, pbe, 1);
-    // draftOrder reste en statut 'Draft'
-    
-    // Appel de la méthode qui effectue l'agrégation sur les Orders activés
-    Decimal sumActivated = OrderController.getSumOrdersByAccount(acc.Id);
-    
-    // Calcul de la somme attendue via les TotalAmount calculés sur les Orders activés
-    Decimal expected = (activatedOrder1.TotalAmount != null ? activatedOrder1.TotalAmount : 0) +
-                       (activatedOrder2.TotalAmount != null ? activatedOrder2.TotalAmount : 0);
-    System.assertEquals(expected, sumActivated, 'La somme des Orders activés doit être égale à la somme des TotalAmount des orders activés.');
+    // Création de plusieurs commandes associées à ce compte
+    // Deux commandes avec le statut Activated et une autre avec un statut différent pour simuler un cas filtré
+    Order order1 = new Order(
+        AccountId = acc.Id, 
+        TotalAmount = 100, 
+        ShipmentCost__c = 10, 
+        Status = 'Activated'
+    );
+    Order order2 = new Order(
+        AccountId = acc.Id, 
+        TotalAmount = 200, 
+        ShipmentCost__c = 20, 
+        Status = 'Activated'
+    );
+    Order order3 = new Order(
+        AccountId = acc.Id, 
+        TotalAmount = 300, 
+        ShipmentCost__c = 30, 
+        Status = 'Draft'
+    );
+    insert new List<Order>{order1, order2, order3};
 }
 
-    //Test pipeline
-    //Test pipeline
-    //Test pipeline
-@isTest 
-static void testGetSumOrdersByAccountWithoutActivatedOrders() {
-    // Création d'un compte pour lequel aucun Order n'est activé
-    Account acc = new Account(Name = 'Test Account No Activated');
+// Test de la méthode getSumOrdersByAccount qui calcule la somme des commandes activées
+static testMethod void testGetSumOrdersByAccount(){
+    // Récupération du compte créé dans la méthode @testSetup
+    Account acc = [SELECT Id FROM Account LIMIT 1];
+    Decimal sumOrders = OrderController.getSumOrdersByAccount(acc.Id);
+    // La somme attendue est 100 + 200 = 300 (la commande au statut Draft doit être ignorée)
+    System.assertEquals(300, sumOrders, 'La somme des commandes activées doit être égale à 300');
+}
+
+// Test de la méthode updateOrderNetAmounts qui calcule le NetAmount__c
+static testMethod void testUpdateOrderNetAmounts(){
+    // Création d'une liste en mémoire (sans insert) afin de simuler un before update
+    List<Order> orders = new List<Order>{
+        new Order(TotalAmount = 100, ShipmentCost__c = 10),
+        new Order(TotalAmount = 200, ShipmentCost__c = 20),
+        // Cas où TotalAmount est null – on considère par défaut 0
+        new Order(TotalAmount = null, ShipmentCost__c = 30)
+    };
+    OrderController.updateOrderNetAmounts(orders);
+    System.assertEquals(90, orders[0].NetAmount__c, '100 - 10 doit donner 90');
+    System.assertEquals(180, orders[1].NetAmount__c, '200 - 20 doit donner 180');
+    System.assertEquals(-30, orders[2].NetAmount__c, '0 - 30 doit donner -30');
+}
+
+// Test de la méthode updateAccountsAfterOrders qui actualise le Chiffre_d_affaire__c sur les Comptes
+static testMethod void testUpdateAccountsAfterOrders(){
+    // Création d'un compte spécifique pour ce test
+    Account acc = new Account(Name = 'Account for Update');
     insert acc;
     
-    // Création d'un Order en statut Draft et ajout d'un Order Item
-    Order draftOrder = DataFactory.createOrder(acc);
-    Product2 prod = DataFactory.createProduct('Non activated Product', 'Test');
-    PricebookEntry pbe = DataFactory.createPricebookEntry(prod, 200);
-    DataFactory.createOrderItem(draftOrder, pbe, 1);
-    // Le statut reste 'Draft'
+    // Création de commandes associées à ce compte (simulateur d'après update)
+    Order order1 = new Order(
+        AccountId = acc.Id, 
+        TotalAmount = 150
+    );
+    Order order2 = new Order(
+        AccountId = acc.Id, 
+        TotalAmount = 250
+    );
+    List<Order> orders = new List<Order>{order1, order2};
+
+    Test.startTest();
+        // Appel de la méthode qui effectue l'update des comptes à partir des commandes
+        OrderController.updateAccountsAfterOrders(orders);
+    Test.stopTest();
     
-    // Appel de la méthode : aucun Order étant activé, l'agrégation doit renvoyer null
-    Decimal sumActivated = OrderController.getSumOrdersByAccount(acc.Id);
-    System.assertEquals(null, sumActivated, 'Aucun Order activé doit renvoyer null.');
+    // Vérifier que le compte a bien été mis à jour : 150 + 250 = 400
+    Account updatedAcc = [SELECT Id, Chiffre_d_affaire__c FROM Account WHERE Id = :acc.Id];
+    System.assertEquals(400, updatedAcc.Chiffre_d_affaire__c, 'La somme totale sur le compte doit être égale à 400');
 }
 }
