@@ -1,4 +1,4 @@
-public without sharing class MyTeamOrdersController {
+public with sharing class MyTeamOrdersController {
     //Test pipeline
 //Test pipeline
 //Test pipeline
