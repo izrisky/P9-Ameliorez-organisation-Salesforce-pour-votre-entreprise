@@ -53,6 +53,9 @@ static void testGetSumOrdersByAccountWithActivatedOrders() {
     System.assertEquals(expected, sumActivated, 'La somme des Orders activés doit être égale à la somme des TotalAmount des orders activés.');
 }
 
+    //Test pipeline
+    //Test pipeline
+    //Test pipeline
 @isTest 
 static void testGetSumOrdersByAccountWithoutActivatedOrders() {
     // Création d'un compte pour lequel aucun Order n'est activé

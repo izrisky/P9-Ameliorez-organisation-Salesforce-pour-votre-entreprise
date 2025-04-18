@@ -2,8 +2,6 @@
     //Test pipeline
     //Test pipeline
     //Test pipeline
-    //Test pipeline
-    //Test pipeline
 @isTest(seeAllData=true)
 private class DataFactoryTest {
 

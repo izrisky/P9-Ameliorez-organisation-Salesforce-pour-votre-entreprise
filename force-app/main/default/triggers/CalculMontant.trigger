@@ -7,5 +7,3 @@ trigger CalculMontant on Order (before update) {
     //Test pipeline
     //Test pipeline
     //Test pipeline
-    //Test pipeline
-    //Test pipeline

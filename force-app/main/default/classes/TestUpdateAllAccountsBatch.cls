@@ -1,10 +1,7 @@
 @isTest
 private class TestUpdateAllAccountsBatch {
     //Test pipeline
-    //Test pipeline
-    //Test pipeline
-    //Test pipeline
-    //Test pipeline
+    //Test pipeline   //Test pipeline
 @isTest static void testBatchExecution() {
 // Création de comptes de test
 Account acc1 = new Account(Name = 'Compte Test 1');

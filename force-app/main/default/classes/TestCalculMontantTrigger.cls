@@ -1,9 +1,5 @@
 
     //Test pipeline
-    //Test pipeline
-    //Test pipeline
-    //Test pipeline
-    //Test pipeline
 @isTest
 private class TestCalculMontantTrigger {
 @isTest

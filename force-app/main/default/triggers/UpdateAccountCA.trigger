@@ -13,6 +13,3 @@ trigger UpdateAccountCA on Order (after update) {
 
     //Test pipeline
     //Test pipeline
-    //Test pipeline
-    //Test pipeline
-    //Test pipeline
