@@ -10,7 +10,7 @@ insert new List<Account>{ acc1, acc2 };
 
     Test.startTest();
     // Exécution du batch en spécifiant une taille de lot adaptée (par exemple 2)
-    Database.executeBatch(new UpdateAllAccounts(), 2);
+    Database.executeBatch(new UpdateAllAccountsBatch(), 2);
     Test.stopTest();
 
     // Aucun assert spécifique n'est nécessaire ici, l'objectif est de vérifier que le batch s'exécute sans erreurs

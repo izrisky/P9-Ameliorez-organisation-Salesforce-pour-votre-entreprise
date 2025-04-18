@@ -1,4 +1,4 @@
-global class UpdateAllAccounts implements Database.Batchable<sObject>{
+global class UpdateAllAccountsBatch implements Database.Batchable<sObject>{
 
     //Test pipeline
     //Test pipeline
