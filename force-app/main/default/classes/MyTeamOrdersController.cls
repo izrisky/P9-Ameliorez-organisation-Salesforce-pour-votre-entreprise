@@ -1,5 +1,6 @@
 public without sharing class MyTeamOrdersController {
-    @AuraEnabled(cacheable=true)
+    //Test pipeline
+    @AuraEnabled(cacheable=true)    
     public static Decimal getSumOrdersByAccount(Id accountId) {
         AggregateResult groupedResults = [SELECT SUM(TotalAmount) total 
             FROM Order 
