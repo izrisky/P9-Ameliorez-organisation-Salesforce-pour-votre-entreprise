@@ -1,6 +1,11 @@
 @isTest(seeAllData=true)
 public class MyTeamOrdersControllerTest {
 
+    //Test pipeline
+    //Test pipeline
+    //Test pipeline
+    //Test pipeline
+    //Test pipeline
 // Méthode utilitaire pour créer un Order activé avec un Order Item
 // Le TotalAmount sera calculé automatiquement par le système (UnitPrice * Quantity)
 private static Order createActivatedOrder(Account acc, Decimal unitPrice, Integer quantity) {
