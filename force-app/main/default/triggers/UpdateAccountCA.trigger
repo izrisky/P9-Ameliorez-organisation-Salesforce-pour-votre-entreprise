@@ -1,5 +1,4 @@
 trigger UpdateAccountCA on Order (after update) {
-    //Test pipeline
 	
     set<Id> setAccountIds = new set<Id>();
     

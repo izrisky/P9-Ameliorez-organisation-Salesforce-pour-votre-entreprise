@@ -19,8 +19,8 @@
  *
  * See the Apex Language Reference for more information about Testing and Code Coverage.
  */
-    //Test pipeline
-@isTest
+//Test pipeline
+@isTest(seeAllData=true)
 private class DataFactoryTest {
 
     @isTest
@@ -67,8 +67,7 @@ private class DataFactoryTest {
         Account acc = DataFactory.createAccount('Account for Order');
         Order ord = DataFactory.createOrder(acc);
         System.assertNotEquals(null, ord.Id, 'L\'order doit être inséré.');
-        System.assertEquals(acc.Id, ord.AccountId, 
-            'L\'Order doit être rattaché à l\'account correspondant.');
+        System.assertEquals(acc.Id, ord.AccountId, 'L\'Order doit être rattaché à l\'account correspondant.');
         System.assertEquals('Draft', ord.Status, 'Le statut de l\'Order doit être "Draft".');
         System.assertNotEquals(null, ord.Pricebook2Id, 'L\'Order doit contenir un Pricebook2Id.');
     }

@@ -1,6 +1,7 @@
 @isTest
 private class testUpdateAllAccounts {
     //Test pipeline
+//Test pipeline
 
     @isTest static void test() {
         Account acc1 = new Account(Name = 'Test Account 1');
