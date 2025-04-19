@@ -1,17 +1,22 @@
 @isTest
 public with sharing class DataFactory {
-    public static void createTestData() {
-    // 1. Création du compte de test
-    Account acc = new Account(Name = 'Test Account');
-    insert acc;
-    // 2. Création du produit de test
+// Méthode utilitaire pour créer un jeu de données complet de test.
+public static void createTestData() {
+    // Création de plusieurs comptes de test (par exemple 3 comptes)
+    List<Account> accounts = new List<Account>();
+    for(Integer i=1; i<=3; i++){
+        accounts.add(new Account(Name = 'Test Account ' + i));
+    }
+    insert accounts;
+    
+    // On crée un produit commun pour tous les comptes
     Product2 prod = new Product2(Name = 'Test Product', IsActive = true);
     insert prod;
     
-    // 3. Récupération du pricebook standard via la méthode dédiée
-    Id pricebookId = getPricebookId();
+    // Récupération du Pricebook standard
+    Id pricebookId = Test.getStandardPricebookId();
     
-    // 4. Création de l'entrée PricebookEntry avec un UnitPrice fixé (ici 100)
+    // Création d'une entrée PricebookEntry
     PricebookEntry pbe = new PricebookEntry(
         Pricebook2Id = pricebookId,
         Product2Id = prod.Id,
@@ -21,39 +26,40 @@ public with sharing class DataFactory {
     );
     insert pbe;
     
-    // 5. Création de 100 commandes en mode 'Draft'
-    List<Order> orders = new List<Order>();
-    for (Integer i = 0; i < 100; i++) {
-        orders.add(new Order(
-            AccountId = acc.Id,
-            Status = 'Draft',
-            Name = 'Order ' + (i + 1),
-            EffectiveDate = Date.today(),
-            Pricebook2Id = pricebookId
-        ));
+    // Pour chaque compte, créer 100 commandes et pour chacune un OrderItem
+    for(Account acc : accounts) {
+        List<Order> orders = new List<Order>();
+        for (Integer j = 0; j < 100; j++) {
+            orders.add(new Order(
+                AccountId = acc.Id,
+                Status = 'Draft',
+                Name = 'Order ' + (j + 1),
+                EffectiveDate = Date.today(),
+                Pricebook2Id = pricebookId
+            ));
+        }
+        insert orders;
+        
+        // Ajout d'un OrderItem à chaque commande pour fixer le TotalAmount à 10
+        List<OrderItem> items = new List<OrderItem>();
+        for(Order o : orders) {
+            items.add(new OrderItem(
+                OrderId = o.Id,
+                PricebookEntryId = pbe.Id,
+                Quantity = 1,
+                UnitPrice = 10,
+                ServiceDate = Date.today().addDays(2)
+            ));
+        }
+        insert items;
+        
+        // Activation de toutes les commandes (la logique de trigger va cumuler les 10 par commande)
+        for(Order o : orders) {
+            o.Status = 'Activated';
+        }
+        update orders;
     }
-    insert orders;
-    
-    // 6. Ajout d'un OrderItem à chacune des commandes afin d'obtenir un TotalAmount de 10
-    List<OrderItem> items = new List<OrderItem>();
-    for (Order o : orders) {
-        items.add(new OrderItem(
-            OrderId = o.Id,
-            PricebookEntryId = pbe.Id,
-            Quantity = 1,
-            UnitPrice = 10,
-            ServiceDate = Date.today().addDays(2)
-        ));
-    }
-    insert items;
-    
-    // 7. Passage de toutes les commandes de 'Draft' à 'Activated'
-    for (Order o : orders) {
-        o.Status = 'Activated';
-    }
-    update orders;
 }
-
 public static Account createAccount(String name) {
     Account acc = new Account(Name = name);
     insert acc;

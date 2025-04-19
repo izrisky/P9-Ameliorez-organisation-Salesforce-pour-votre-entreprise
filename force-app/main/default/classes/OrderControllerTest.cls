@@ -7,7 +7,7 @@ static void setup() {
 @isTest
 static void testGetSumOrdersByAccount() {
     // Récupération du compte créé dans le TestSetup de DataFactory
-    Account acc = [SELECT Id FROM Account WHERE Name = 'Test Account' LIMIT 1];
+    Account acc = [SELECT Id FROM Account WHERE Name = 'Test Account 1' LIMIT 1];
     
     Test.startTest();
         Decimal result = OrderController.getSumOrdersByAccount(acc.Id);
@@ -22,7 +22,7 @@ static void testUpdateOrderNetAmountsFromSetup() {
         // Récupérer une commande issue du TestSetup de DataFactory
     Order orderToTest = [SELECT Id, TotalAmount, ShipmentCost__c, NetAmount__c 
                          FROM Order 
-                         WHERE AccountId IN (SELECT Id FROM Account WHERE Name = 'Test Account')
+                         WHERE AccountId IN (SELECT Id FROM Account WHERE Name = 'Test Account 1')
                          LIMIT 1];
                          
     // Vérifier que TotalAmount est égal à 10 (défini via l'OrderItem)
@@ -43,7 +43,7 @@ static void testUpdateOrderNetAmountsFromSetup() {
 @isTest
 static void testUpdateOrderByFashaOnAccountWith100Orders() {
     // Récupération du compte pour vérifier le chiffre d'affaires initial
-    Account accBefore = [SELECT Id, Chiffre_d_affaire__c FROM Account WHERE Name = 'Test Account' LIMIT 1];
+    Account accBefore = [SELECT Id, Chiffre_d_affaire__c FROM Account WHERE Name = 'Test Account 1' LIMIT 1];
     System.assertEquals(1000, accBefore.Chiffre_d_affaire__c, 'Le CA initial devrait être 1000.');
     
     // Création d'un utilisateur représentant le commercial de Fasha

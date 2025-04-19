@@ -28,7 +28,7 @@ private class OrderSelectorTest {
 @isTest
 static void testOrderSelector() {
     // Test sur le OrderSelector appelé depuis le controller déjà testé
-    Account acc = [SELECT Id FROM Account WHERE Name = 'Test Account' LIMIT 1];
+    Account acc = [SELECT Id FROM Account WHERE Name = 'Test Account 1' LIMIT 1];
     AggregateResult result = OrderSelector.getSumAggregateByAccount(acc.Id);
     Decimal sum = (Decimal)result.get('total');
     System.assertEquals(1000, sum, 'OrderSelector doit retourner 1000 pour la somme des commandes activées.');

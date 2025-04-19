@@ -27,7 +27,7 @@ private class AccountSelectorTest {
     }
     @isTest
     static void testAccountSelector() {
-        Account acc = [SELECT Id FROM Account WHERE Name = 'Test Account' LIMIT 1];
+        Account acc = [SELECT Id FROM Account WHERE Name = 'Test Account 1' LIMIT 1];
         Set<Id> accountIds = new Set<Id>{acc.Id};
         Map<Id, Account> accounts = AccountSelector.getAccountsByIds(accountIds);
         System.assert(accounts.containsKey(acc.Id), 'AccountSelector doit retourner le compte demandé.');
