@@ -1,9 +1,7 @@
 public with sharing class OrderController {
     @AuraEnabled(cacheable=true)    
     public static Decimal getSumOrdersByAccount(Id accountId) {
-        AggregateResult groupedResults = [SELECT SUM(TotalAmount) total 
-            FROM Order 
-            WHERE AccountId = :accountId AND Status = 'Activated'];
+        AggregateResult groupedResults = OrderSelector.getSumAggregateByAccount(accountId);
         return (Decimal)groupedResults.get('total');
     }
 
@@ -17,8 +15,7 @@ public with sharing class OrderController {
     }
 
     // Méthode à appeler dans le trigger after update
-    public static void updateAccountsAfterOrders(List<Order> orders) {
-        // Collecte les AccountId concernés
+    public static void updateAccountsAfterOrders(List<Order> orders, List<Order> oldOrders) {
         Set<Id> accountIds = new Set<Id>();
         for (Order o : orders) {
             if (o.AccountId != null) {
@@ -26,21 +23,30 @@ public with sharing class OrderController {
             }
         }
         
-        // Récupère les comptes en une seule requête
-        Map<Id, Account> accountMap = new Map<Id, Account>(
-            [SELECT Id, Chiffre_d_affaire__c FROM Account WHERE Id IN :accountIds]
-        );
+        Map<Id, Account> accountMap = AccountSelector.getAccountsByIds(accountIds);
+        Map<Id, Order> oldOrderMap = new Map<Id, Order>(oldOrders); // Crée une map des anciennes commandes
         
-        // Cumule le TotalAmount pour chaque compte
-        for (Order o : orders) {
-            if (o.AccountId != null && accountMap.containsKey(o.AccountId)) {
-                Account acc = accountMap.get(o.AccountId);
-                Decimal currentCA = (acc.Chiffre_d_affaire__c == null) ? 0 : acc.Chiffre_d_affaire__c;
-                acc.Chiffre_d_affaire__c = currentCA + o.TotalAmount;
+        for (Order newOrder : orders) {
+            Order oldOrder = oldOrderMap.get(newOrder.Id);
+            Id accId = newOrder.AccountId;
+            
+            if (accId == null || !accountMap.containsKey(accId)) continue;
+            
+            Account acc = accountMap.get(accId);
+            Decimal currentCA = acc.Chiffre_d_affaire__c != null ? acc.Chiffre_d_affaire__c : 0;
+            
+            // Soustraire uniquement si l'ancien statut était 'Activated'
+            if (oldOrder != null && oldOrder.Status == 'Activated') {
+                currentCA -= oldOrder.TotalAmount;
+            }            
+            // Ajouter uniquement si le nouveau statut est 'Activated'
+            if (newOrder.Status == 'Activated') {
+                currentCA += newOrder.TotalAmount;
             }
+            
+            acc.Chiffre_d_affaire__c = currentCA;
         }
         
-        // Mise à jour unique des comptes modifiés
         update accountMap.values();
     }
 

@@ -1,12 +1,24 @@
-<template>
-	<template if:true={sumOrdersOfCurrentAccount}>
-		<div class="slds-box slds-theme_success"> 
-			<h1>Total des Commandes : {sumOrdersOfCurrentAccount}</h1> 
-		</div> 
-	</template>
-	<template if:false={sumOrdersOfCurrentAccount}>
-		<div class="slds-box slds-theme_error">
-			<h1>Erreur, pas de commandes rattachées au compte ou montant total égal à zéro.</h1> 
+<template> <lightning-card title="Total des Commandes" icon-name="standard:order"> <div class="slds-p-around_medium"> <!-- Affichage du spinner pendant le chargement --> <template if:true={isLoading}> <lightning-spinner alternative-text="Chargement..." size="medium"></lightning-spinner> </template>
+	<!-- Affichage du message d'erreur -->
+	<template if:true={errorMessage}>
+		<div class="slds-text-color_error">
+			<p>{errorMessage}</p>
 		</div>
-	</template> 
+	</template>
+
+	<!-- Affichage du montant ou d'un message quand aucune donnée n'est trouvée -->
+	<template if:false={errorMessage}>
+		<template if:true={hasData}>
+			<div class="slds-theme_success slds-p-around_medium">
+				<h1 class="slds-text-heading_medium">Total des Commandes : {sumOrdersOfCurrentAccount}</h1>
+			</div>
+		</template>
+		<template if:false={hasData}>
+			<div class="slds-theme_error slds-p-around_medium">
+				<h1 class="slds-text-heading_medium">Erreur, pas de commandes rattachées au compte ou montant total égal à zéro.</h1>
+			</div>
+		</template>
+	</template>
+</div>
+</lightning-card>
 </template>

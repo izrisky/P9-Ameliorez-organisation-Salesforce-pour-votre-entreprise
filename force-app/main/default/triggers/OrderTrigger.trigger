@@ -6,6 +6,6 @@ trigger OrderTrigger on Order (before insert, before update, after update) {
 
     // After Update : Mise à jour des comptes
     if (Trigger.isAfter && Trigger.isUpdate) {
-        OrderController.updateAccountsAfterOrders(Trigger.new);
+        OrderController.updateAccountsAfterOrders(Trigger.new, Trigger.old);
     }
 }
