@@ -23,7 +23,7 @@
 private class OrderSelectorTest {
     @TestSetup
     static void setup() {
-        DataFactory.createTestData();
+        DataFactory.createTestData(1);
     }
 @isTest
 static void testOrderSelector() {

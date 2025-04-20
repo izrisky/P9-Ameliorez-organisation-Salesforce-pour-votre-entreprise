@@ -1,10 +1,10 @@
 @isTest
 public with sharing class DataFactory {
 // Méthode utilitaire pour créer un jeu de données complet de test.
-public static void createTestData() {
+public static void createTestData(Integer accCount) {
     // Création de plusieurs comptes de test (par exemple 3 comptes)
     List<Account> accounts = new List<Account>();
-    for(Integer i=1; i<=3; i++){
+    for(Integer i=1; i<=accCount; i++){
         accounts.add(new Account(Name = 'Test Account ' + i));
     }
     insert accounts;

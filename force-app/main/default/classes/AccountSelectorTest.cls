@@ -23,7 +23,7 @@
 private class AccountSelectorTest {
     @TestSetup
     static void setup() {
-        DataFactory.createTestData();
+        DataFactory.createTestData(1);
     }
     @isTest
     static void testAccountSelector() {

@@ -2,7 +2,7 @@
 private class OrderControllerTest {
     @TestSetup
 static void setup() {
-    DataFactory.createTestData();
+    DataFactory.createTestData(1);
 }
 @isTest
 static void testGetSumOrdersByAccount() {
@@ -63,7 +63,9 @@ static void testUpdateOrderByFashaOnAccountWith100Orders() {
     
     // Récupération d'une commande associée au compte
     Order orderToUpdate = [SELECT Id, EffectiveDate, TotalAmount FROM Order WHERE AccountId = :accBefore.Id LIMIT 1];
-    
+    Long startTime = System.now().getTime();
+        
+    System.debug('Début de l\'éxecution du trigger CalculAccount  de mise à jours des accounts sur un benchmark de 30 accounts avec chacun une comande qui contient 100 produits.');
     Test.startTest();
         // Exécution de la mise à jour sous l'utilisateur Fasha
         System.runAs(fashaUser) {
@@ -101,6 +103,11 @@ static void testUpdateOrderByFashaOnAccountWith100Orders() {
             orderToUpdate = [SELECT Id, TotalAmount FROM Order WHERE Id = :orderToUpdate.Id];
         }
     Test.stopTest();
+        // Capture le temps à la fin
+        Long executionTime = System.now().getTime() - startTime;
+        
+        System.debug('Temps d\'exécution : ' + executionTime + 'ms');
+
     // L'ordre initial comportait un OrderItem de 10, et on vient d'ajouter un nouvel OrderItem de 20,
     // donc le nouveau TotalAmount devrait être 10 + 20 = 30.
     System.assertEquals(30, orderToUpdate.TotalAmount, 'Le nouveau TotalAmount devrait être 30.');
