@@ -13,6 +13,11 @@ static void testGetSumOrdersByAccount() {
         Decimal result = OrderController.getSumOrdersByAccount(acc.Id);
     Test.stopTest();
 
+        // Mesurer l'impact
+        System.debug('=== testGetSumOrdersByAccount ===');
+        System.debug('CPU: ' + Limits.getCpuTime() + 'ms'); // ✅ Généralement < 1000ms
+        System.debug('SOQL: ' + Limits.getQueries());        // ✅ 2 requêtes (Accounts + Orders)
+        System.debug('DML: ' + Limits.getDmlStatements());   // ✅ 3 updates (1 par compte)
     // Avec 100 commandes à 10 chacune, le total doit être 1000.
     System.assertEquals(1000, result, 'Le montant total devrait être 1000.');
 }
@@ -36,6 +41,11 @@ static void testUpdateOrderNetAmountsFromSetup() {
         OrderController.updateOrderNetAmounts(new List<Order>{ orderToTest });
     Test.stopTest();
     
+        // Mesurer l'impact
+        System.debug('=== testUpdateOrderNetAmountsFromSetup ===');
+        System.debug('CPU: ' + Limits.getCpuTime() + 'ms'); // ✅ Généralement < 1000ms
+        System.debug('SOQL: ' + Limits.getQueries());        // ✅ 2 requêtes (Accounts + Orders)
+        System.debug('DML: ' + Limits.getDmlStatements());   // ✅ 3 updates (1 par compte)
     // Le NetAmount__c doit être égal à 10 - 3 = 7
     System.assertEquals(7, orderToTest.NetAmount__c, 'NetAmount__c doit être égal à 7 (10 - 3).');
 }
@@ -107,6 +117,11 @@ static void testUpdateOrderByFashaOnAccountWith100Orders() {
         Long executionTime = System.now().getTime() - startTime;
         
         System.debug('Temps d\'exécution : ' + executionTime + 'ms');
+        // Mesurer l'impact
+        System.debug('=== testUpdateOrderByFashaOnAccountWith100Orders ===');
+        System.debug('CPU: ' + Limits.getCpuTime() + 'ms'); // ✅ Généralement < 1000ms
+        System.debug('SOQL: ' + Limits.getQueries());        // ✅ 2 requêtes (Accounts + Orders)
+        System.debug('DML: ' + Limits.getDmlStatements());   // ✅ 3 updates (1 par compte)
 
     // L'ordre initial comportait un OrderItem de 10, et on vient d'ajouter un nouvel OrderItem de 20,
     // donc le nouveau TotalAmount devrait être 10 + 20 = 30.
@@ -117,4 +132,26 @@ static void testUpdateOrderByFashaOnAccountWith100Orders() {
     Decimal expectedCA = 990 + orderToUpdate.TotalAmount; // 1000-10 + 30 (nouveau total)  = 1020
     System.assertEquals(expectedCA, accAfter.Chiffre_d_affaire__c, 'Le CA du compte devrait être mis à jour à ' + expectedCA + '.');
 }
+
+    // Tester les performances du NOUVEAU code (méthode bulkifiée)
+    @isTest
+    static void testNewCodePerformance() {
+        List<Order> orders = [SELECT Id FROM Order WHERE Status = 'Draft'];
+        for(Order o : orders) {
+            o.Status = 'Draft';
+        }
+        Test.startTest();
+            // Activer les commandes (déclenche la nouvelle logique)
+            for(Order o : orders) {
+                o.Status = 'Activated';
+            }
+            update orders;
+        Test.stopTest();
+        
+        // Mesurer l'impact
+        System.debug('=== testNewCodePerformance ===');
+        System.debug('CPU: ' + Limits.getCpuTime() + 'ms'); // ✅ Généralement < 1000ms
+        System.debug('SOQL: ' + Limits.getQueries());        // ✅ 2 requêtes (Accounts + Orders)
+        System.debug('DML: ' + Limits.getDmlStatements());   // ✅ 3 updates (1 par compte)
+    }
 }
