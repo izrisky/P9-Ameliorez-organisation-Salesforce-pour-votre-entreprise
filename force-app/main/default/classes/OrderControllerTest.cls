@@ -2,7 +2,7 @@
 private class OrderControllerTest {
     @TestSetup
 static void setup() {
-    DataFactory.createTestData(1);
+    DataFactory.createTestData(5);
 }
 @isTest
 static void testGetSumOrdersByAccount() {

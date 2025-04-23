@@ -1,4 +1,6 @@
 public with sharing class OrderController {
+    //Test pipeline 
+    //Test pipeline 
     @AuraEnabled(cacheable=true)    
     // Méthode utiliser dans la le composant LWC Orders
     public static Decimal getSumOrdersByAccount(Id accountId) {
